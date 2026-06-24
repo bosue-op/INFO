@@ -1207,7 +1207,8 @@ main {
   .weather-current-icon { font-size: 40px; }
 
   .weather-city-select { margin-top: 8px; width: 100%; }
-  .weather-city-select input { width: 100% !important; }
+  .weather-city-select input { flex: 1; min-width: 0; width: auto !important; }
+  .weather-city-select button { flex-shrink: 0; }
 
   .header-controls { display: flex; }
   .icon-btn { width: 30px; height: 30px; }

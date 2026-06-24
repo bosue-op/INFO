@@ -607,6 +607,30 @@
             </div>
           </div>
 
+          <div class="weather-section-label">DÉTAILS</div>
+          <div class="weather-detail-strip">
+            <div class="weather-ds-item">
+              <span class="weather-ds-label">Humidité</span>
+              <span class="weather-ds-value">${cc.humidity || '—'}%</span>
+            </div>
+            <div class="weather-ds-item">
+              <span class="weather-ds-label">Vent</span>
+              <span class="weather-ds-value">${cc.windspeedKmph ? Math.round(parseFloat(cc.windspeedKmph)) + ' km/h' : '—'}</span>
+            </div>
+            <div class="weather-ds-item">
+              <span class="weather-ds-label">Ressenti</span>
+              <span class="weather-ds-value">${Math.round(parseFloat(cc.FeelsLikeC || 0))}°</span>
+            </div>
+            <div class="weather-ds-item">
+              <span class="weather-ds-label">Pression</span>
+              <span class="weather-ds-value">${cc.pressure ? cc.pressure + ' hPa' : '—'}</span>
+            </div>
+            <div class="weather-ds-item">
+              <span class="weather-ds-label">Visibilité</span>
+              <span class="weather-ds-value">${cc.visibility ? cc.visibility + ' km' : '—'}</span>
+            </div>
+          </div>
+
           ${todayHourly.length ? `
           <div class="weather-section-label">AUJOURD'HUI</div>
           <div class="weather-hourly-strip">
@@ -668,30 +692,6 @@
                 </div>
               </div>
             `).join('')}
-          </div>
-
-          <div class="weather-section-label">DÉTAILS</div>
-          <div class="weather-detail-strip">
-            <div class="weather-ds-item">
-              <span class="weather-ds-label">Humidité</span>
-              <span class="weather-ds-value">${cc.humidity || '—'}%</span>
-            </div>
-            <div class="weather-ds-item">
-              <span class="weather-ds-label">Vent</span>
-              <span class="weather-ds-value">${cc.windspeedKmph ? Math.round(parseFloat(cc.windspeedKmph)) + ' km/h' : '—'}</span>
-            </div>
-            <div class="weather-ds-item">
-              <span class="weather-ds-label">Ressenti</span>
-              <span class="weather-ds-value">${Math.round(parseFloat(cc.FeelsLikeC || 0))}°</span>
-            </div>
-            <div class="weather-ds-item">
-              <span class="weather-ds-label">Pression</span>
-              <span class="weather-ds-value">${cc.pressure ? cc.pressure + ' hPa' : '—'}</span>
-            </div>
-            <div class="weather-ds-item">
-              <span class="weather-ds-label">Visibilité</span>
-              <span class="weather-ds-value">${cc.visibility ? cc.visibility + ' km' : '—'}</span>
-            </div>
           </div>
         </div>
       `;
