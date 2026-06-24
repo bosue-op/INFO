@@ -24,7 +24,6 @@
 
   const state = {
     articles: [], currentCat: 'all', filtered: [],
-    currentWikiCat: 'wikipedia', wikiResults: null,
     wikiCache: {}, articleId: 0,
     currentArticle: null,
   };
@@ -38,165 +37,88 @@
     wikiSearch: $('#wikiSearch'), wikiSearchBtn: $('#wikiSearchBtn'),
     wikiContent: $('#wikiContent'), wikiResult: $('#wikiResult'),
     wikiHistory: $('#wikiHistory'),
-    wikiCatTabs: $('.wiki-cat-tabs'), wikiCatBtns: $$('.wiki-cat-btn'),
     articleView: $('#articleView'), articleBody: $('#articleBody'),
     articleClose: $('#articleClose'), notif: $('.notification'),
     shareBtn: $('#shareBtn'),
     themeBtn: $('#themeBtn'),
     weatherContent: $('#weatherContent'), weatherResult: $('#weatherResult'),
     weatherCity: $('#weatherCity'), weatherCityBtn: $('#weatherCityBtn'),
-    cryptoResult: $('#cryptoResult'), cryptoRefreshBtn: $('#cryptoRefreshBtn'),
+    cryptoRefreshBtn: $('#cryptoRefreshBtn'),
+    cryptoResult: $('#cryptoResult'),
   };
 
-  /* --- UTILS --- */
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  let cryptoShowAll = false;
+  let cryptoRawFilter = '';
+  let cryptoFilter = '';
 
-  function formatDate(str) {
-    if (!str) return '';
-    const d = new Date(str);
-    if (isNaN(d.getTime())) return '';
-    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  function sanitize(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
   }
 
-  function stripHtml(html) {
-    if (!html) return '';
-    const t = document.createElement('div');
-    t.innerHTML = html;
-    return t.textContent || t.innerText || '';
-  }
+  function truncate(s, l) { return s && s.length > l ? s.slice(0, l) + '…' : s || ''; }
 
-  function sanitize(str) {
-    if (!str) return '';
-    const t = document.createElement('div');
-    t.textContent = str;
-    return t.innerHTML;
-  }
+  function stripHtml(s) { return s ? s.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').replace(/\s+/g, ' ').trim() : ''; }
 
   function extractImg(html) {
-    if (!html) return null;
-    const m = html.match(/<img[^>]+src=["']([^"']+)["']/i);
-    if (m) return m[1];
-    const m2 = html.match(/<media:content[^>]+url=["']([^"']+)["']/i);
-    if (m2) return m2[1];
-    const m3 = html.match(/<enclosure[^>]+url=["']([^"']+)["']/i);
-    if (m3) return m3[1];
-    return null;
+    if (!html) return '';
+    const m = html.match(/<img[^>]+src=["']([^"']+)["']/);
+    return m ? m[1] : '';
   }
 
-  function simpleHash(str) {
-    let hash = 0;
-    if (!str) return 0;
-    for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
-    return Math.abs(hash);
+  function simpleHash(s) {
+    let h = 0;
+    for (let i = 0; i < (s || '').length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+    return Math.abs(h);
   }
 
-  function truncate(text, n) {
-    if (!text) return '';
-    return text.length > n ? text.slice(0, n).trim() + '…' : text;
+  function formatDate(s) {
+    if (!s) return '';
+    const d = new Date(s);
+    if (isNaN(d)) return s;
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function typewrite(el, html) {
+    if (!el) return;
+    let idx = 0;
+    el.innerHTML = '<span class="typing-cursor"></span>';
+    const step = () => {
+      if (idx >= html.length) { el.innerHTML = html; return; }
+      const chunk = html.slice(idx, idx + 5);
+      idx += 5;
+      el.innerHTML = html.slice(0, idx) + '<span class="typing-cursor"></span>';
+      requestAnimationFrame(step);
+    };
+    step();
   }
 
   function notify(msg) {
     dom.notif.textContent = msg;
     dom.notif.classList.add('show');
-    clearTimeout(dom.notif._t);
-    dom.notif._t = setTimeout(() => dom.notif.classList.remove('show'), 3000);
-  }
-
-  function loading(el) { el.innerHTML = '<div class="loading-state">Chargement…</div>'; }
-
-  function error(el, msg) {
-    el.innerHTML = `<div class="error-state"><p>${sanitize(msg || 'Une erreur est survenue.')}</p></div>`;
-  }
-
-  function debounce(fn, ms) {
-    let timer;
-    return function (...args) {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn.apply(this, args), ms);
-    };
+    clearTimeout(window._notifTimer);
+    window._notifTimer = setTimeout(() => dom.notif.classList.remove('show'), 3000);
   }
 
   async function fetchJSON(url, signal) {
-    const res = await fetch(url, { signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(url, { signal, headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
   }
 
-  async function typewrite(container, html) {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    container.innerHTML = '';
-    const speed = 18;
-    for (const node of tmp.childNodes) {
-      if (!container.isConnected || container.style.display === 'none') return;
-      if (node.nodeType === 1) {
-        if (node.tagName === 'P') {
-          const p = document.createElement('p');
-          container.appendChild(p);
-          const words = node.textContent.split(/(\s+)/);
-          for (let i = 0; i < words.length; i++) {
-            if (!container.isConnected || container.style.display === 'none') return;
-            p.textContent += words[i];
-            if (i % 2 === 0) await sleep(speed + Math.random() * 8);
-          }
-          p.classList.add('typing-cursor');
-          await sleep(60);
-          p.classList.remove('typing-cursor');
-        } else if (node.tagName === 'IMG') {
-          container.appendChild(node.cloneNode(true));
-        } else {
-          container.appendChild(node.cloneNode(true));
-        }
-      }
-    }
+  function debounce(fn, ms) {
+    let t;
+    return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
   }
 
-  /* --- HARD RESET --- */
-  async function hardReset() {
-    notify('Nettoyage du cache…');
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-    }
-    notify('Rechargement…');
-    setTimeout(() => window.location.reload(true), 500);
-  }
-
-  /* --- THEME --- */
-  function applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('infohub-theme', theme);
-    const sun = dom.themeBtn.querySelector('.sun-icon');
-    const moon = dom.themeBtn.querySelector('.moon-icon');
-    if (theme === 'light') { sun.style.display = 'none'; moon.style.display = ''; }
-    else { sun.style.display = ''; moon.style.display = 'none'; }
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = theme === 'light' ? '#f5f5f7' : '#0b0b1a';
-  }
-
-  function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme');
-    applyTheme(current === 'light' ? 'dark' : 'light');
-  }
-
-  function initTheme() {
-    const saved = localStorage.getItem('infohub-theme');
-    if (saved) { applyTheme(saved); return; }
-    const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-    applyTheme(prefersLight ? 'light' : 'dark');
-  }
-
-  /* --- SEARCH HISTORY --- */
   function loadHistory(key) {
-    try { return JSON.parse(localStorage.getItem(key)) || []; } catch (_) { return []; }
+    try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
   }
 
   function saveHistory(key, items) {
-    localStorage.setItem(key, JSON.stringify(items.slice(0, 10)));
+    try { localStorage.setItem(key, JSON.stringify(items.slice(0, 15))); } catch {}
   }
 
   function addHistory(key, value) {
@@ -224,7 +146,6 @@
     if (clearBtn) clearBtn.addEventListener('click', () => clearHistory(clearKey, el));
   }
 
-  /* --- RSS / NEWS --- */
   async function loadFeed(feed) {
     const url = `${RSS2JSON_API}?rss_url=${encodeURIComponent(feed.url)}`;
     try {
@@ -235,7 +156,7 @@
         desc: stripHtml(item.description || ''),
         link: item.link || '#',
         date: item.pubDate || '',
-        img: item.thumbnail || extractImg(item.content || '') || extractImg(item.description || '') || `https://picsum.photos/seed/${simpleHash(item.title || item.link)}/400/250`,
+        img: item.thumbnail || item.enclosure?.link || extractImg(item.content || '') || extractImg(item.description || '') || `https://picsum.photos/seed/${simpleHash(item.title || item.link)}/400/250`,
         source: feed.name, category: feed.cat, feedId: feed.id,
       }));
     } catch (e) {
@@ -311,7 +232,6 @@
     if (newsSection) newsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  /* --- SHARE --- */
   async function shareArticle() {
     const a = state.currentArticle;
     if (!a) return;
@@ -391,12 +311,7 @@
     return defs.slice(0, 10);
   }
 
-  function getWikiSource(id) {
-    if (id === 'all') return null;
-    return WIKI_SOURCES.find(s => s.id === id) || WIKI_SOURCES[0];
-  }
-
-  async function handleWikiSearch(query) {
+  async function handleUnifiedWikiSearch(query) {
     if (!query.trim()) return;
     if (wikiAbort) wikiAbort.abort();
     wikiAbort = new AbortController();
@@ -405,43 +320,43 @@
 
     addHistory('infohub-wiki-history', q);
 
-    if (state.currentWikiCat === 'all') {
-      await handleUnifiedSearch(q, signal);
-    } else {
-      await handleSingleWikiSearch(q, signal);
-    }
-  }
-
-  async function handleUnifiedSearch(q, signal) {
-    const cacheKey = 'all_' + q.toLowerCase();
+    const cacheKey = 'unified_' + q.toLowerCase();
     if (state.wikiCache[cacheKey]) {
-      renderUnifiedResults(state.wikiCache[cacheKey]);
+      renderUnifiedWikiResults(state.wikiCache[cacheKey]);
       dom.wikiResult.style.display = 'block';
       dom.wikiContent.style.display = 'none';
       return;
     }
 
     dom.wikiResult.style.display = 'block';
-    dom.wikiResult.innerHTML = '<div class="loading-state">Recherche sur tous les wikis...</div>';
+    dom.wikiResult.innerHTML = '<div class="loading-state">Recherche sur tous les wikis…</div>';
     dom.wikiContent.style.display = 'none';
 
     try {
       const results = await Promise.allSettled(
         WIKI_SOURCES.map(src =>
           wikiSearchSource(src.domain, q, signal, 4)
-            .then(res => ({ source: src, results: res }))
-            .catch(() => ({ source: src, results: [] }))
+            .then(searchRes => {
+              return { source: src, results: searchRes };
+            })
         )
       );
+
       if (signal.aborted) return;
 
-      const sources = results.map(r => r.value).filter(s => s.results.length);
-      if (!sources.length) {
+      const sources = results.map((r, i) => {
+        if (r.status === 'fulfilled') return r.value;
+        return { source: WIKI_SOURCES[i], results: [] };
+      });
+
+      const totalResults = sources.reduce((sum, s) => sum + s.results.length, 0);
+
+      if (totalResults === 0) {
         dom.wikiResult.innerHTML = '<div class="error-state"><p>Aucun résultat trouvé sur les wikis.</p></div>';
         return;
       }
 
-      renderUnifiedResults(sources);
+      renderUnifiedWikiResults(sources);
       cacheWiki(cacheKey, sources);
     } catch (e) {
       if (e.name === 'AbortError') return;
@@ -449,37 +364,46 @@
     }
   }
 
-  function renderUnifiedResults(sources) {
-    let html = '<div class="wiki-results">';
+  function renderUnifiedWikiResults(sources) {
+    let html = '<div class="wiki-unified-results">';
 
     sources.forEach(({ source, results }) => {
       const domain = source.domain;
+      const isOpen = source.id === 'wikipedia' || source.id === 'wiktionary' || source.id === 'wikibooks';
+
       html += `
         <div class="wiki-source-section">
           <div class="wiki-source-header" data-toggle="${source.id}">
             <span class="source-dot"></span>
             <span class="source-name">${sanitize(source.label)}</span>
             <span class="source-count">${results.length}</span>
-            <span class="source-toggle">❯</span>
+            <span class="source-toggle ${isOpen ? 'open' : ''}">❯</span>
           </div>
-          <div class="wiki-source-body">
+          <div class="wiki-source-body ${isOpen ? '' : 'collapsed'}">
       `;
 
-      results.forEach(r => {
-        const enc = encodeURIComponent(r.title);
-        html += `
-          <div class="wiki-entry">
-            <div class="wiki-entry-title">
-              <a href="${domain}/wiki/${enc}" target="_blank" rel="noopener noreferrer" class="wiki-entry-link">${sanitize(r.title)}</a>
-              <button class="wiki-expand-btn" data-domain="${domain}" data-title="${sanitize(r.title)}" title="Afficher l'article complet">❯</button>
+      if (!results.length) {
+        html += '<div class="wiki-empty">Aucun résultat</div>';
+      } else {
+        results.forEach(r => {
+          const enc = encodeURIComponent(r.title);
+          html += `
+            <div class="wiki-entry">
+              <div class="wiki-entry-title">
+                <a href="${domain}/wiki/${enc}" target="_blank" rel="noopener noreferrer" class="wiki-entry-link">${sanitize(r.title)}</a>
+                <button class="wiki-expand-btn" data-domain="${domain}" data-title="${sanitize(r.title)}" title="Afficher l'article complet">❯</button>
+              </div>
+              <div class="wiki-entry-desc">${sanitize(truncate(stripHtml(r.snippet || ''), 240))}</div>
+              <div class="wiki-entry-full" style="display:none"></div>
             </div>
-            <div class="wiki-entry-desc">${sanitize(truncate(stripHtml(r.snippet || ''), 240))}</div>
-            <div class="wiki-entry-full" style="display:none"></div>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
 
-      html += `</div></div>`;
+      html += `
+          </div>
+        </div>
+      `;
     });
 
     html += '</div>';
@@ -490,17 +414,12 @@
         const body = hdr.nextElementSibling;
         const toggle = hdr.querySelector('.source-toggle');
         if (body) {
-          const wasCollapsed = body.classList.contains('collapsed');
           body.classList.toggle('collapsed');
-          if (toggle) toggle.textContent = wasCollapsed ? 'v' : '❯';
+          if (toggle) toggle.classList.toggle('open');
         }
       });
     });
 
-    attachWikiExpand();
-  }
-
-  function attachWikiExpand() {
     dom.wikiResult.querySelectorAll('.wiki-expand-btn').forEach(btn => {
       btn.addEventListener('click', async e => {
         e.stopPropagation();
@@ -510,18 +429,18 @@
 
         if (fullDiv.style.display === 'block') {
           fullDiv.style.display = 'none';
-          btn.textContent = '❯';
+          btn.classList.remove('open');
           btn.title = "Afficher l'article complet";
           return;
         }
 
-        const domn = btn.dataset.domain;
+        const domain = btn.dataset.domain;
         const title = btn.dataset.title;
-        if (!domn || !title) return;
+        if (!domain || !title) return;
 
         fullDiv.innerHTML = '<div class="loading-state" style="padding:16px 0">Chargement…</div>';
         fullDiv.style.display = 'block';
-        btn.textContent = 'v';
+        btn.classList.add('open');
         btn.title = 'Réduire';
 
         try {
@@ -529,7 +448,7 @@
           const tmr = setTimeout(() => ac.abort(), 10000);
           let html = '';
 
-          if (domn.includes('wiktionary')) {
+          if (domain.includes('wiktionary')) {
             const defs = await wikiGetWiktionaryDefs(title, ac.signal);
             clearTimeout(tmr);
             if (defs && defs.length) {
@@ -541,13 +460,12 @@
                 }
                 html += `<div style="padding:4px 0 4px 12px;border-left:2px solid var(--accent);margin-bottom:4px;font-size:13px">${sanitize(d.text)}</div>`;
               });
-              const lbl = btn.closest('.wiki-source-section')?.querySelector('.source-name')?.textContent || 'le wiki';
-              html += `<p style="margin-top:10px"><a href="${domn}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(lbl)} →</a></p>`;
+              html += `<p style="margin-top:10px"><a href="${domain}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(btn.closest('.wiki-source-section')?.querySelector('.source-name')?.textContent || 'le wiki')} →</a></p>`;
             } else {
               html = '<p style="color:var(--text-dim)">Aucune définition trouvée.</p>';
             }
           } else {
-            const page = await wikiGetExtract(domn, title, ac.signal);
+            const page = await wikiGetExtract(domain, title, ac.signal);
             clearTimeout(tmr);
             if (!page || !page.extract) {
               fullDiv.innerHTML = '<p style="color:var(--text-dim)">Contenu non disponible.</p>';
@@ -555,13 +473,16 @@
             }
             const paragraphs = page.extract.split('\n').filter(p => p.trim()).map(p => sanitize(p));
             const thumb = page.thumbnail ? page.thumbnail.source : '';
-            if (thumb) html += `<img src="${sanitize(thumb)}" alt="" loading="lazy">`;
+            if (thumb) {
+              fullDiv.innerHTML = `<img src="${sanitize(thumb)}" alt="" loading="lazy" style="margin-bottom:12px">`;
+            }
             html += paragraphs.map(p => `<p>${p}</p>`).join('');
-            const lbl = btn.closest('.wiki-source-section')?.querySelector('.source-name')?.textContent || 'le wiki';
-            html += `<p style="margin-top:10px"><a href="${domn}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(lbl)} →</a></p>`;
+            html += `<p style="margin-top:10px"><a href="${domain}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(btn.closest('.wiki-source-section')?.querySelector('.source-name')?.textContent || 'le wiki')} →</a></p>`;
           }
 
-          fullDiv.innerHTML = '';
+          if (!fullDiv.innerHTML) {
+            fullDiv.innerHTML = '';
+          }
           typewrite(fullDiv, html);
         } catch (_) {
           fullDiv.innerHTML = '<p style="color:var(--text-dim)">Erreur de chargement.</p>';
@@ -570,61 +491,15 @@
     });
   }
 
-  async function handleSingleWikiSearch(q, signal) {
-    const src = getWikiSource(state.currentWikiCat);
-    const cacheKey = src.id + '_' + q.toLowerCase();
-    if (state.wikiCache[cacheKey]) {
-      renderSingleWikiResults(src, state.wikiCache[cacheKey]);
-      dom.wikiResult.style.display = 'block';
-      dom.wikiContent.style.display = 'none';
-      return;
-    }
-
-    dom.wikiResult.style.display = 'block';
-    dom.wikiResult.innerHTML = '<div class="loading-state">Recherche sur ' + sanitize(src.label) + '...</div>';
-    dom.wikiContent.style.display = 'none';
-
+  async function showUnifiedWikiInitial() {
     try {
-      const results = await wikiSearchSource(src.domain, q, signal, 10);
-      if (signal.aborted) return;
-
-      if (!results.length) {
-        dom.wikiResult.innerHTML = '<div class="error-state"><p>Aucun résultat sur ' + sanitize(src.label) + '.</p></div>';
-        return;
-      }
-
-      renderSingleWikiResults(src, results);
-      cacheWiki(cacheKey, results);
-    } catch (e) {
-      if (e.name === 'AbortError') return;
-      dom.wikiResult.innerHTML = '<div class="error-state"><p>Erreur de connexion à ' + sanitize(src.label) + '.</p></div>';
-    }
+      const signal = new AbortController().signal;
+      const randoms = await wikiSearchSource('https://fr.wikipedia.org', 'a', signal, 6);
+      if (!randoms.length) return;
+      dom.wikiContent.querySelector('.initial-hint').style.display = 'block';
+    } catch (_) {}
   }
 
-  function renderSingleWikiResults(source, results) {
-    const domain = source.domain;
-    let html = '<div class="wiki-results">';
-
-    results.forEach(r => {
-      const enc = encodeURIComponent(r.title);
-      html += `
-        <div class="wiki-entry">
-          <div class="wiki-entry-title">
-            <a href="${domain}/wiki/${enc}" target="_blank" rel="noopener noreferrer" class="wiki-entry-link">${sanitize(r.title)}</a>
-            <button class="wiki-expand-btn" data-domain="${domain}" data-title="${sanitize(r.title)}" title="Afficher l'article complet">❯</button>
-          </div>
-          <div class="wiki-entry-desc">${sanitize(truncate(stripHtml(r.snippet || ''), 240))}</div>
-          <div class="wiki-entry-full" style="display:none"></div>
-        </div>
-      `;
-    });
-
-    html += '</div>';
-    dom.wikiResult.innerHTML = html;
-    attachWikiExpand();
-  }
-
-  /* --- WEATHER --- */
   async function loadWeather(city) {
     dom.weatherContent.style.display = 'none';
     dom.weatherResult.style.display = 'block';
@@ -649,235 +524,158 @@
           const hour = Math.floor(parseInt(h.time, 10) / 100);
           return hour >= curH;
         }).slice(0, 8).map(h => ({
-          hour: Math.floor(parseInt(h.time, 10) / 100),
-          temp: h.tempC,
-          code: h.weatherCode,
-          feels: h.FeelsLikeC,
+          time: `${Math.floor(parseInt(h.time, 10) / 100)}h`,
+          temp: Math.round(h.tempC),
+          icon: getWeatherEmoji(h.weatherDesc?.[0]?.value || '', true),
+          precip: h.chanceofrain || '0',
         }));
       }
 
-      function hourlyPrecip(hours) {
-        if (!hours || !hours.length) return 0;
-        return hours.reduce((sum, h) => sum + (parseFloat(h.precipMM) || 0), 0);
-      }
-
-      const todayHourly = getTodayHourly(weather[0]?.hourly);
-
-      dom.weatherResult.innerHTML = `
+      let html = `
         <div class="weather-card">
           <div class="weather-current">
             <div class="weather-current-temp">
-              <span class="weather-current-icon">${getWeatherEmoji(cc.weatherCode)}</span>
-              <span class="weather-current-deg">${Math.round(parseFloat(cc.temp_C))}°</span>
+              <span class="weather-current-icon">${getWeatherEmoji(cc.weatherDesc?.[0]?.value || '')}</span>
+              <span class="weather-current-deg">${Math.round(cc.temp_C)}°</span>
             </div>
-            <div class="weather-current-desc">${sanitize(cc.lang_fr?.[0]?.value || cc.weatherDesc?.[0]?.value || '')}</div>
+            <div class="weather-current-desc">${sanitize(cc.weatherDesc?.[0]?.value || '')}</div>
             <div class="weather-current-loc">${locName}</div>
-            <div class="weather-current-hilo">
-              H: ${Math.round(parseFloat(weather[0]?.maxtempC || cc.temp_C))}° &nbsp; L: ${Math.round(parseFloat(weather[0]?.mintempC || cc.temp_C))}°
-            </div>
+            <div class="weather-current-hilo">${Math.round(cc.maxtempC || '')}° / ${Math.round(cc.mintempC || '')}°</div>
           </div>
-
-          <div class="weather-section-label">DÉTAILS</div>
-          <div class="weather-detail-strip">
-            <div class="weather-ds-item">
-              <span class="weather-ds-label">Humidité</span>
-              <span class="weather-ds-value">${cc.humidity || '—'}%</span>
-            </div>
-            <div class="weather-ds-item">
-              <span class="weather-ds-label">Vent</span>
-              <span class="weather-ds-value">${cc.windspeedKmph ? Math.round(parseFloat(cc.windspeedKmph)) + ' km/h' : '—'}</span>
-            </div>
-            <div class="weather-ds-item">
-              <span class="weather-ds-label">Ressenti</span>
-              <span class="weather-ds-value">${Math.round(parseFloat(cc.FeelsLikeC || 0))}°</span>
-            </div>
-            <div class="weather-ds-item">
-              <span class="weather-ds-label">Pression</span>
-              <span class="weather-ds-value">${cc.pressure ? cc.pressure + ' hPa' : '—'}</span>
-            </div>
-            <div class="weather-ds-item">
-              <span class="weather-ds-label">Visibilité</span>
-              <span class="weather-ds-value">${cc.visibility ? cc.visibility + ' km' : '—'}</span>
-            </div>
-          </div>
-
-          ${todayHourly.length ? `
-          <div class="weather-section-label">AUJOURD'HUI</div>
-          <div class="weather-hourly-strip">
-            ${todayHourly.map(h => `
-              <div class="weather-hourly-cell">
-                <div class="weather-hourly-cell-time">${String(h.hour).padStart(2, '0')}:00</div>
-                <div class="weather-hourly-cell-icon">${getWeatherEmoji(h.code)}</div>
-                <div class="weather-hourly-cell-temp">${Math.round(parseFloat(h.temp || 0))}°</div>
-              </div>
-            `).join('')}
-          </div>` : ''}
-
-          <div class="weather-section-label">PRÉVISIONS</div>
-          <div class="mf-days">
-            ${weather.map((d, idx) => `
-              <div class="mf-day-card">
-                <div class="mf-day-header">${idx === 0 ? "Aujourd'hui" : formatDay(d.date)}</div>
-                <div class="mf-day-body">
-                  <span class="mf-day-icon">${getWeatherEmoji(d.hourly?.[0]?.weatherCode)}</span>
-                  <div class="mf-day-temps">
-                    <span class="mf-day-high">${Math.round(parseFloat(d.maxtempC || 0))}°</span>
-                    <span class="mf-day-low">${Math.round(parseFloat(d.mintempC || 0))}°</span>
-                  </div>
-                </div>
-                <div class="mf-day-infos">
-                  <span class="mf-day-info">
-                    <span class="mf-day-info-label">Pluie</span>
-                    <span>${hourlyPrecip(d.hourly) > 0 ? hourlyPrecip(d.hourly).toFixed(1) + 'mm' : '—'}</span>
-                  </span>
-                  <span class="mf-day-info">
-                    <span class="mf-day-info-label">Vent</span>
-                    <span>${cc.windspeedKmph ? Math.round(parseFloat(cc.windspeedKmph)) + 'km/h' : '—'}</span>
-                  </span>
-                  <span class="mf-day-info">
-                    <span class="mf-day-info-label">UV</span>
-                    <span>${idx === 0 ? (cc.uvIndex || '—') : '—'}</span>
-                  </span>
-                </div>
-                <button class="weather-daily-btn mf-day-btn" data-idx="${idx}" title="Détails"><span class="arrow">❯</span> Détails</button>
-                <div class="weather-daily-detail" id="forecast-${idx}" style="display:none">
-                  <div class="weather-daily-detail-grid">
-                    <div class="weather-dd-item">
-                      <span class="weather-dd-label">Lever</span>
-                      <span class="weather-dd-val">${sanitize(d.astronomy?.[0]?.sunrise || '—')}</span>
-                    </div>
-                    <div class="weather-dd-item">
-                      <span class="weather-dd-label">Coucher</span>
-                      <span class="weather-dd-val">${sanitize(d.astronomy?.[0]?.sunset || '—')}</span>
-                    </div>
-                    <div class="weather-dd-item">
-                      <span class="weather-dd-label">Humidité</span>
-                      <span class="weather-dd-val">${cc.humidity || '—'}%</span>
-                    </div>
-                    <div class="weather-dd-item">
-                      <span class="weather-dd-label">Ressenti</span>
-                      <span class="weather-dd-val">${Math.round(parseFloat(cc.FeelsLikeC || 0))}°</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
       `;
 
-      dom.weatherResult.querySelectorAll('.weather-daily-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-          e.stopPropagation();
-          const idx = btn.dataset.idx;
-          const detail = document.getElementById('forecast-' + idx);
-          if (!detail) return;
-          const isOpen = detail.style.display !== 'none';
-          detail.style.display = isOpen ? 'none' : 'block';
-          btn.classList.toggle('open', !isOpen);
-        });
+      if (cc.humidity || cc.windspeedKmph || cc.FeelsLikeC || cc.pressure || cc.visibility) {
+        html += `
+          <div class="weather-section-label">DÉTAILS</div>
+          <div class="weather-detail-strip">
+            <div class="weather-ds-item"><span class="weather-ds-label">Humidité</span><span class="weather-ds-value">${cc.humidity || '—'}%</span></div>
+            <div class="weather-ds-item"><span class="weather-ds-label">Vent</span><span class="weather-ds-value">${cc.windspeedKmph || '—'} km/h</span></div>
+            <div class="weather-ds-item"><span class="weather-ds-label">Ressenti</span><span class="weather-ds-value">${Math.round(cc.FeelsLikeC || '—')}°</span></div>
+            <div class="weather-ds-item"><span class="weather-ds-label">Pression</span><span class="weather-ds-value">${cc.pressure || '—'} hPa</span></div>
+            <div class="weather-ds-item"><span class="weather-ds-label">Visibilité</span><span class="weather-ds-value">${cc.visibility || '—'} km</span></div>
+          </div>
+        `;
+      }
+
+      html += `<div class="weather-section-label">AUJOURD'HUI</div>`;
+
+      if (weather[0]?.hourly) {
+        const hourly = getTodayHourly(weather[0].hourly);
+        if (hourly.length) {
+          html += '<div class="weather-hourly-strip">';
+          hourly.forEach(h => {
+            html += `
+              <div class="weather-hourly-cell">
+                <div class="weather-hourly-cell-time">${sanitize(h.time)}</div>
+                <div class="weather-hourly-cell-icon">${h.icon}</div>
+                <div class="weather-hourly-cell-temp">${h.temp}°</div>
+                <div class="weather-hourly-cell-precip">${h.precip}%</div>
+              </div>
+            `;
+          });
+          html += '</div>';
+        }
+      }
+
+      html += '<div class="weather-section-label">PRÉVISIONS</div><div class="mf-days">';
+
+      weather.forEach((day, i) => {
+        const date = new Date(day.date);
+        const dayName = i === 0 ? "Aujourd'hui" : date.toLocaleDateString('fr-FR', { weekday: 'long' });
+        html += `
+          <div class="mf-day-card">
+            <div class="mf-day-header">${sanitize(dayName)}</div>
+            <div class="mf-day-body">
+              <span class="mf-day-icon">${getWeatherEmoji(day.hourly?.[0]?.weatherDesc?.[0]?.value || '', true)}</span>
+              <span class="mf-day-temps">
+                <span class="mf-day-high">${Math.round(day.maxtempC)}°</span>
+                <span class="mf-day-low">${Math.round(day.mintempC)}°</span>
+              </span>
+            </div>
+            <div class="mf-day-infos">
+              <div class="mf-day-info"><span class="mf-day-info-label">Pluie</span>${day.hourly?.[0]?.chanceofrain || '0'}%</div>
+              <div class="mf-day-info"><span class="mf-day-info-label">Vent</span>${day.hourly?.[0]?.windspeedKmph || '—'} km/h</div>
+              <div class="mf-day-info"><span class="mf-day-info-label">UV</span>${day.uvIndex || '—'}</div>
+            </div>
+          </div>
+        `;
       });
+
+      html += '</div></div>';
+      dom.weatherResult.innerHTML = html;
     } catch (e) {
-      dom.weatherResult.innerHTML = '<div class="error-state"><p>Impossible de charger la météo pour cette ville.</p></div>';
+      if (e.name === 'AbortError') return;
+      dom.weatherResult.innerHTML = '<div class="error-state"><p>Ville introuvable ou erreur réseau.</p></div>';
     }
   }
 
-  function getWeatherEmoji(code) {
-    const map = {
-      '113': '☀️', '116': '🌤', '119': '☁️', '122': '☁️', '143': '🌫',
-      '176': '🌦', '179': '🌧', '182': '🌧', '185': '🌧', '200': '⛈',
-      '227': '🌨', '230': '❄️', '248': '🌫', '260': '🌫', '263': '🌦',
-      '266': '🌦', '281': '🌧', '284': '🌧', '293': '🌦', '296': '🌦',
-      '299': '🌧', '302': '🌧', '305': '🌧', '308': '🌧', '311': '🌧',
-      '314': '🌧', '317': '🌧', '320': '🌨', '323': '🌨', '326': '🌨',
-      '329': '❄️', '332': '❄️', '335': '❄️', '338': '❄️', '350': '🧊',
-      '353': '🌦', '356': '🌧', '359': '🌧', '362': '🌧', '365': '🌧',
-      '368': '🌨', '371': '❄️', '374': '🌧', '377': '🌧', '386': '⛈',
-      '389': '⛈', '392': '⛈', '395': '❄️',
-    };
-    return map[code] || '🌤';
+  function getWeatherEmoji(desc, small) {
+    const d = desc.toLowerCase();
+    if (d.includes('soleil') || d.includes('ensoleill')) return small ? '☀️' : '☀️';
+    if (d.includes('éclairci') || d.includes('partiellement')) return small ? '⛅' : '⛅';
+    if (d.includes('nuage')) return small ? '☁️' : '☁️';
+    if (d.includes('plu') || d.includes('averse') || d.includes('giboulée')) return small ? '🌧️' : '🌧️';
+    if (d.includes('orage') || d.includes('tonnerre')) return small ? '⛈️' : '⛈️';
+    if (d.includes('neige') || d.includes('verglas')) return small ? '❄️' : '❄️';
+    if (d.includes('brouillard') || d.includes('brume')) return small ? '🌫️' : '🌫️';
+    if (d.includes('vent')) return small ? '💨' : '💨';
+    return small ? '☀️' : '☀️';
   }
-
-  function formatDay(dateStr) {
-    const d = new Date(dateStr + 'T12:00:00');
-    return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
-  }
-
-  /* --- CRYPTO --- */
-  let cryptoData = [];
-  let cryptoFilter = '';
-  let cryptoRawFilter = '';
-  let cryptoShowAll = false;
 
   async function loadCrypto() {
-    const el = dom.cryptoResult;
-    if (!el) return;
-    el.innerHTML = '<div class="loading-state">Chargement des cours...</div>';
+    dom.cryptoResult.innerHTML = '<div class="loading-state">Chargement des cours...</div>';
     try {
       const ac = new AbortController();
       const tmr = setTimeout(() => ac.abort(), 15000);
-      const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&order=market_cap_desc&per_page=50&page=1&sparkline=false', { signal: ac.signal });
+      const data = await fetchJSON('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false', ac.signal);
       clearTimeout(tmr);
-      if (!res.ok) throw new Error('API error ' + res.status);
-      cryptoData = await res.json();
-      cryptoShowAll = false;
-      cryptoFilter = '';
-      cryptoRawFilter = '';
-      const searchInput = document.getElementById('cryptoSearch');
-      if (searchInput) searchInput.value = '';
-      renderCrypto();
-    } catch (e) {
-      el.innerHTML = '<div class="error-state">Erreur de chargement des cours crypto.</div>';
+      renderCrypto(data);
+    } catch (_) {
+      dom.cryptoResult.innerHTML = '<div class="error-state"><p>Erreur de chargement des cryptos.</p></div>';
     }
   }
 
-  function renderCrypto() {
-    const el = dom.cryptoResult;
-    if (!el) return;
+  function renderCrypto(data) {
+    if (!data) data = state._cryptoData;
+    if (!data) return;
+    state._cryptoData = data;
 
     const filtered = cryptoFilter
-      ? cryptoData.filter(c => c.name.toLowerCase().includes(cryptoFilter) || c.symbol.toLowerCase().includes(cryptoFilter))
-      : cryptoData;
+      ? data.filter(c => c.name.toLowerCase().includes(cryptoFilter) || c.symbol.toLowerCase().includes(cryptoFilter))
+      : data;
 
-    const visible = cryptoShowAll ? filtered : filtered.slice(0, 8);
+    const max = cryptoShowAll ? filtered.length : Math.min(filtered.length, 20);
+    const slice = filtered.slice(0, max);
 
-    let html = `
-      <div class="crypto-grid">
-        ${visible.map(c => {
-          const change = c.price_change_percentage_24h || 0;
-          const cls = change >= 0 ? 'up' : 'down';
-          const arrow = change >= 0 ? '▲' : '▼';
-          const price = c.current_price != null ? c.current_price.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
-          return `
-            <div class="crypto-card">
-              <div class="crypto-header">
-                <img src="${sanitize(c.image)}" alt="" class="crypto-icon-img" loading="lazy" onerror="this.style.display='none'">
-                <span class="crypto-name">${sanitize(c.name)}</span>
-                <span class="crypto-ticker">${sanitize(c.symbol.toUpperCase())}</span>
-              </div>
-              <div class="crypto-price">${price} €</div>
-              <div class="crypto-rank">${c.market_cap_rank ? '#' + c.market_cap_rank : ''}</div>
-              <div class="crypto-change ${cls}">
-                ${arrow} ${Math.abs(change).toFixed(2)}%
-              </div>
-            </div>`;
-        }).join('')}
-      </div>
-      <p style="font-size:11px;color:var(--text-dim);margin-top:8px;text-align:center">Via CoinGecko.com</p>
-    `;
+    let html = '<div class="crypto-grid">';
+    slice.forEach(c => {
+      const change = c.price_change_percentage_24h || 0;
+      const cls = change >= 0 ? 'up' : 'down';
+      const arrow = change >= 0 ? '▲' : '▼';
+      html += `
+        <div class="crypto-card">
+          <div class="crypto-header">
+            ${c.image ? `<img class="crypto-icon-img" src="${sanitize(c.image)}" alt="" loading="lazy">` : ''}
+            <span class="crypto-name">${sanitize(c.name)}</span>
+            <span class="crypto-ticker">${sanitize(c.symbol.toUpperCase())}</span>
+          </div>
+          <div class="crypto-price">$${formatCryptoPrice(c.current_price)}</div>
+          <div class="crypto-rank">Rang #${c.market_cap_rank || '—'}</div>
+          <div class="crypto-change ${cls}">${arrow} ${Math.abs(change).toFixed(2)}%</div>
+        </div>
+      `;
+    });
+    html += '</div>';
 
-    if (filtered.length > 8 && !cryptoShowAll) {
-      html += `<button class="crypto-more-btn" id="crypto-show-more">Afficher plus (${filtered.length - 8})</button>`;
-    }
-    if (cryptoShowAll && filtered.length > 8) {
-      html += `<button class="crypto-more-btn" id="crypto-show-less">Afficher moins</button>`;
+    if (filtered.length > 20 && !cryptoShowAll) {
+      html += `<button id="cryptoShowAllBtn" class="crypto-more-btn">Afficher tout (${filtered.length})</button>`;
     }
 
-    el.innerHTML = html;
+    dom.cryptoResult.innerHTML = html;
 
-    const showMore = document.getElementById('crypto-show-more');
-    if (showMore) {
-      showMore.addEventListener('click', () => {
+    const showAll = document.getElementById('cryptoShowAllBtn');
+    if (showAll) {
+      showAll.addEventListener('click', () => {
         cryptoShowAll = true;
         renderCrypto();
       });
@@ -892,7 +690,34 @@
     }
   }
 
-  /* --- NAVIGATION --- */
+  function formatCryptoPrice(p) {
+    if (!p) return '—';
+    if (p >= 1) return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (p >= 0.01) return p.toFixed(4);
+    return p.toFixed(8);
+  }
+
+  function initTheme() {
+    const saved = localStorage.getItem('infohub-theme');
+    if (saved) applyTheme(saved);
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('infohub-theme', theme);
+    const sun = dom.themeBtn.querySelector('.sun-icon');
+    const moon = dom.themeBtn.querySelector('.moon-icon');
+    if (theme === 'light') { sun.style.display = 'none'; moon.style.display = ''; }
+    else { sun.style.display = ''; moon.style.display = 'none'; }
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = theme === 'light' ? '#f5f5f7' : '#0b0b1a';
+  }
+
+  function toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme');
+    applyTheme(cur === 'light' ? 'dark' : 'light');
+  }
+
   function switchSection(id) {
     dom.navBtns.forEach(b => {
       b.classList.toggle('active', b.dataset.section === id);
@@ -902,7 +727,7 @@
 
     if (id === 'wiki') {
       const hist = loadHistory('infohub-wiki-history');
-      renderHistory(dom.wikiHistory, hist, v => { dom.wikiSearch.value = v; handleWikiSearch(v); }, 'infohub-wiki-history');
+      renderHistory(dom.wikiHistory, hist, v => { dom.wikiSearch.value = v; handleUnifiedWikiSearch(v); }, 'infohub-wiki-history');
     }
     if (id === 'weather') {
       const city = dom.weatherCity.value.trim() || 'Paris';
@@ -921,18 +746,6 @@
     filterAndRender();
   }
 
-  function switchWikiCat(cat) {
-    state.currentWikiCat = cat;
-    dom.wikiCatBtns.forEach(b => {
-      const active = b.dataset.wiki === cat;
-      b.classList.toggle('active', active);
-      b.setAttribute('aria-selected', active ? 'true' : 'false');
-    });
-    const q = dom.wikiSearch.value.trim();
-    if (q) handleWikiSearch(q);
-  }
-
-  /* --- EVENTS --- */
   function init() {
     initTheme();
 
@@ -969,14 +782,8 @@
 
     dom.shareBtn.addEventListener('click', shareArticle);
     dom.themeBtn.addEventListener('click', toggleTheme);
-    const resetBtn = document.getElementById('resetBtn');
-    if (resetBtn) resetBtn.addEventListener('click', hardReset);
 
-    dom.wikiCatBtns.forEach(btn => {
-      btn.addEventListener('click', () => switchWikiCat(btn.dataset.wiki));
-    });
-
-    function doWiki() { handleWikiSearch(dom.wikiSearch.value); }
+    function doWiki() { handleUnifiedWikiSearch(dom.wikiSearch.value); }
     dom.wikiSearchBtn.addEventListener('click', doWiki);
     dom.wikiSearch.addEventListener('keydown', e => { if (e.key === 'Enter') doWiki(); });
     dom.wikiSearch.addEventListener('input', debounce(() => {
@@ -1027,5 +834,5 @@
 
   document.addEventListener('DOMContentLoaded', init);
 
-  window.__INFOHUB = { state, loadAllFeeds, handleWikiSearch, loadWeather, loadCrypto };
+  window.__INFOHUB = { state, loadAllFeeds, handleUnifiedWikiSearch, loadWeather, loadCrypto };
 })();
