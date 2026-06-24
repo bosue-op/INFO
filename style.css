@@ -486,8 +486,16 @@ main {
   margin-bottom: 24px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
+  border-radius: 12px;
   overflow: hidden;
   transition: box-shadow 0.3s ease;
+}
+
+.wiki-empty {
+  padding: 16px 18px;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.9em;
 }
 
 .wiki-source-header {

@@ -442,8 +442,6 @@
     let html = '<div class="wiki-unified-results">';
 
     sources.forEach(({ source, results }) => {
-      if (!results.length) return;
-
       const domain = source.domain;
       const isOpen = source.id === 'wikipedia' || source.id === 'wiktionary';
 
@@ -458,7 +456,10 @@
           <div class="wiki-source-body ${isOpen ? '' : 'collapsed'}">
       `;
 
-      results.forEach(r => {
+      if (!results.length) {
+        html += '<div class="wiki-empty">Aucun résultat</div>';
+      } else {
+        results.forEach(r => {
         const enc = encodeURIComponent(r.title);
         html += `
           <div class="wiki-entry">
@@ -471,6 +472,8 @@
           </div>
         `;
       });
+
+      }
 
       html += `
           </div>
