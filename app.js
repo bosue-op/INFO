@@ -392,6 +392,7 @@
   }
 
   function getWikiSource(id) {
+    if (id === 'all') return null;
     return WIKI_SOURCES.find(s => s.id === id) || WIKI_SOURCES[0];
   }
 
@@ -404,57 +405,102 @@
 
     addHistory('infohub-wiki-history', q);
 
-    const src = getWikiSource(state.currentWikiCat);
-    const cacheKey = src.id + '_' + q.toLowerCase();
+    if (state.currentWikiCat === 'all') {
+      await handleUnifiedSearch(q, signal);
+    } else {
+      await handleSingleWikiSearch(q, signal);
+    }
+  }
+
+  async function handleUnifiedSearch(q, signal) {
+    const cacheKey = 'all_' + q.toLowerCase();
     if (state.wikiCache[cacheKey]) {
-      renderWikiResults(src, state.wikiCache[cacheKey]);
+      renderUnifiedResults(state.wikiCache[cacheKey]);
       dom.wikiResult.style.display = 'block';
       dom.wikiContent.style.display = 'none';
       return;
     }
 
     dom.wikiResult.style.display = 'block';
-    dom.wikiResult.innerHTML = '<div class="loading-state">Recherche sur ' + sanitize(src.label) + '...</div>';
+    dom.wikiResult.innerHTML = '<div class="loading-state">Recherche sur tous les wikis...</div>';
     dom.wikiContent.style.display = 'none';
 
     try {
-      const results = await wikiSearchSource(src.domain, q, signal, 10);
+      const results = await Promise.allSettled(
+        WIKI_SOURCES.map(src =>
+          wikiSearchSource(src.domain, q, signal, 4)
+            .then(res => ({ source: src, results: res }))
+            .catch(() => ({ source: src, results: [] }))
+        )
+      );
       if (signal.aborted) return;
 
-      if (!results.length) {
-        dom.wikiResult.innerHTML = '<div class="error-state"><p>Aucun résultat sur ' + sanitize(src.label) + '.</p></div>';
+      const sources = results.map(r => r.value).filter(s => s.results.length);
+      if (!sources.length) {
+        dom.wikiResult.innerHTML = '<div class="error-state"><p>Aucun résultat trouvé sur les wikis.</p></div>';
         return;
       }
 
-      renderWikiResults(src, results);
-      cacheWiki(cacheKey, results);
+      renderUnifiedResults(sources);
+      cacheWiki(cacheKey, sources);
     } catch (e) {
       if (e.name === 'AbortError') return;
-      dom.wikiResult.innerHTML = '<div class="error-state"><p>Erreur de connexion à ' + sanitize(src.label) + '.</p></div>';
+      dom.wikiResult.innerHTML = '<div class="error-state"><p>Erreur de connexion aux wikis.</p></div>';
     }
   }
 
-  function renderWikiResults(source, results) {
-    const domain = source.domain;
+  function renderUnifiedResults(sources) {
     let html = '<div class="wiki-results">';
 
-    results.forEach(r => {
-      const enc = encodeURIComponent(r.title);
+    sources.forEach(({ source, results }) => {
+      const domain = source.domain;
       html += `
-        <div class="wiki-entry">
-          <div class="wiki-entry-title">
-            <a href="${domain}/wiki/${enc}" target="_blank" rel="noopener noreferrer" class="wiki-entry-link">${sanitize(r.title)}</a>
-            <button class="wiki-expand-btn" data-domain="${domain}" data-title="${sanitize(r.title)}" title="Afficher l'article complet">❯</button>
+        <div class="wiki-source-section">
+          <div class="wiki-source-header" data-toggle="${source.id}">
+            <span class="source-dot"></span>
+            <span class="source-name">${sanitize(source.label)}</span>
+            <span class="source-count">${results.length}</span>
+            <span class="source-toggle">❯</span>
           </div>
-          <div class="wiki-entry-desc">${sanitize(truncate(stripHtml(r.snippet || ''), 240))}</div>
-          <div class="wiki-entry-full" style="display:none"></div>
-        </div>
+          <div class="wiki-source-body">
       `;
+
+      results.forEach(r => {
+        const enc = encodeURIComponent(r.title);
+        html += `
+          <div class="wiki-entry">
+            <div class="wiki-entry-title">
+              <a href="${domain}/wiki/${enc}" target="_blank" rel="noopener noreferrer" class="wiki-entry-link">${sanitize(r.title)}</a>
+              <button class="wiki-expand-btn" data-domain="${domain}" data-title="${sanitize(r.title)}" title="Afficher l'article complet">❯</button>
+            </div>
+            <div class="wiki-entry-desc">${sanitize(truncate(stripHtml(r.snippet || ''), 240))}</div>
+            <div class="wiki-entry-full" style="display:none"></div>
+          </div>
+        `;
+      });
+
+      html += `</div></div>`;
     });
 
     html += '</div>';
     dom.wikiResult.innerHTML = html;
 
+    dom.wikiResult.querySelectorAll('.wiki-source-header').forEach(hdr => {
+      hdr.addEventListener('click', () => {
+        const body = hdr.nextElementSibling;
+        const toggle = hdr.querySelector('.source-toggle');
+        if (body) {
+          const wasCollapsed = body.classList.contains('collapsed');
+          body.classList.toggle('collapsed');
+          if (toggle) toggle.textContent = wasCollapsed ? 'v' : '❯';
+        }
+      });
+    });
+
+    attachWikiExpand();
+  }
+
+  function attachWikiExpand() {
     dom.wikiResult.querySelectorAll('.wiki-expand-btn').forEach(btn => {
       btn.addEventListener('click', async e => {
         e.stopPropagation();
@@ -495,7 +541,8 @@
                 }
                 html += `<div style="padding:4px 0 4px 12px;border-left:2px solid var(--accent);margin-bottom:4px;font-size:13px">${sanitize(d.text)}</div>`;
               });
-              html += `<p style="margin-top:10px"><a href="${domn}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(source.label)} →</a></p>`;
+              const lbl = btn.closest('.wiki-source-section')?.querySelector('.source-name')?.textContent || 'le wiki';
+              html += `<p style="margin-top:10px"><a href="${domn}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(lbl)} →</a></p>`;
             } else {
               html = '<p style="color:var(--text-dim)">Aucune définition trouvée.</p>';
             }
@@ -510,7 +557,8 @@
             const thumb = page.thumbnail ? page.thumbnail.source : '';
             if (thumb) html += `<img src="${sanitize(thumb)}" alt="" loading="lazy">`;
             html += paragraphs.map(p => `<p>${p}</p>`).join('');
-            html += `<p style="margin-top:10px"><a href="${domn}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(source.label)} →</a></p>`;
+            const lbl = btn.closest('.wiki-source-section')?.querySelector('.source-name')?.textContent || 'le wiki';
+            html += `<p style="margin-top:10px"><a href="${domn}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(lbl)} →</a></p>`;
           }
 
           fullDiv.innerHTML = '';
@@ -520,6 +568,60 @@
         }
       });
     });
+  }
+
+  async function handleSingleWikiSearch(q, signal) {
+    const src = getWikiSource(state.currentWikiCat);
+    const cacheKey = src.id + '_' + q.toLowerCase();
+    if (state.wikiCache[cacheKey]) {
+      renderSingleWikiResults(src, state.wikiCache[cacheKey]);
+      dom.wikiResult.style.display = 'block';
+      dom.wikiContent.style.display = 'none';
+      return;
+    }
+
+    dom.wikiResult.style.display = 'block';
+    dom.wikiResult.innerHTML = '<div class="loading-state">Recherche sur ' + sanitize(src.label) + '...</div>';
+    dom.wikiContent.style.display = 'none';
+
+    try {
+      const results = await wikiSearchSource(src.domain, q, signal, 10);
+      if (signal.aborted) return;
+
+      if (!results.length) {
+        dom.wikiResult.innerHTML = '<div class="error-state"><p>Aucun résultat sur ' + sanitize(src.label) + '.</p></div>';
+        return;
+      }
+
+      renderSingleWikiResults(src, results);
+      cacheWiki(cacheKey, results);
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      dom.wikiResult.innerHTML = '<div class="error-state"><p>Erreur de connexion à ' + sanitize(src.label) + '.</p></div>';
+    }
+  }
+
+  function renderSingleWikiResults(source, results) {
+    const domain = source.domain;
+    let html = '<div class="wiki-results">';
+
+    results.forEach(r => {
+      const enc = encodeURIComponent(r.title);
+      html += `
+        <div class="wiki-entry">
+          <div class="wiki-entry-title">
+            <a href="${domain}/wiki/${enc}" target="_blank" rel="noopener noreferrer" class="wiki-entry-link">${sanitize(r.title)}</a>
+            <button class="wiki-expand-btn" data-domain="${domain}" data-title="${sanitize(r.title)}" title="Afficher l'article complet">❯</button>
+          </div>
+          <div class="wiki-entry-desc">${sanitize(truncate(stripHtml(r.snippet || ''), 240))}</div>
+          <div class="wiki-entry-full" style="display:none"></div>
+        </div>
+      `;
+    });
+
+    html += '</div>';
+    dom.wikiResult.innerHTML = html;
+    attachWikiExpand();
   }
 
   /* --- WEATHER --- */
