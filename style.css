@@ -9,12 +9,20 @@
   --text-secondary: #a8a8be;
   --text-muted: #787898;
   --text-dim: #58587a;
-  --accent: #7c5cf0;
-  --accent-hover: #6a4de0;
-  --accent-gradient: linear-gradient(135deg, #7c5cf0, #6c5ce7);
-  --accent-gradient-2: linear-gradient(135deg, #7c5cf0, #6c5ce7);
+  --accent: #ffffff;
+  --accent-hover: #d0d0d0;
+  --accent-text: #0c0c16;
+  --accent-gradient: linear-gradient(135deg, #ffffff, #d0d0d0);
+  --accent-gradient-2: linear-gradient(135deg, #ffffff, #d0d0d0);
   --border: #242438;
   --shadow: rgba(0, 0, 0, 0.5);
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.15);
+  --card-border-soft: rgba(255, 255, 255, 0.1);
+  --card-shadow: rgba(255, 255, 255, 0.12);
+  --card-shadow-sm: rgba(255, 255, 255, 0.10);
+  --card-divider: rgba(255, 255, 255, 0.06);
+  --focus-glow: rgba(255, 255, 255, 0.15);
   --radius: 16px;
   --radius-sm: 10px;
 }
@@ -28,10 +36,18 @@
   --text-secondary: #4a4a5a;
   --text-muted: #7a7a8a;
   --text-dim: #a0a0ae;
-  --accent: #7c5cf0;
-  --accent-hover: #6a4de0;
+  --accent: #000000;
+  --accent-hover: #333333;
+  --accent-text: #ffffff;
   --border: #d0d0dc;
   --shadow: rgba(0, 0, 0, 0.06);
+  --card-bg: rgba(0, 0, 0, 0.04);
+  --card-border: rgba(0, 0, 0, 0.15);
+  --card-border-soft: rgba(0, 0, 0, 0.1);
+  --card-shadow: rgba(0, 0, 0, 0.12);
+  --card-shadow-sm: rgba(0, 0, 0, 0.10);
+  --card-divider: rgba(0, 0, 0, 0.06);
+  --focus-glow: rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-color-scheme: light) {
@@ -44,10 +60,18 @@
     --text-secondary: #4a4a5a;
     --text-muted: #7a7a8a;
     --text-dim: #a0a0ae;
-    --accent: #7c5cf0;
-    --accent-hover: #6a4de0;
+    --accent: #000000;
+    --accent-hover: #333333;
+    --accent-text: #ffffff;
     --border: #d0d0dc;
     --shadow: rgba(0, 0, 0, 0.06);
+    --card-bg: rgba(0, 0, 0, 0.04);
+    --card-border: rgba(0, 0, 0, 0.15);
+    --card-border-soft: rgba(0, 0, 0, 0.1);
+    --card-shadow: rgba(0, 0, 0, 0.12);
+    --card-shadow-sm: rgba(0, 0, 0, 0.10);
+    --card-divider: rgba(0, 0, 0, 0.06);
+    --focus-glow: rgba(0, 0, 0, 0.12);
   }
 }
 
@@ -74,9 +98,14 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 60% 40% at 0% 10%, rgba(79, 124, 240, 0.06) 0%, transparent 60%);
+    radial-gradient(ellipse 60% 40% at 0% 10%, rgba(255, 255, 255, 0.04) 0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
+}
+
+:root[data-theme="light"] body::before {
+  background:
+    radial-gradient(ellipse 60% 40% at 0% 10%, rgba(0, 0, 0, 0.04) 0%, transparent 60%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -89,7 +118,7 @@ body::before {
   top: -100%;
   left: 16px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
   padding: 8px 16px;
   z-index: 1000;
   text-decoration: none;
@@ -109,7 +138,8 @@ body::before {
   border: 0;
 }
 
-::selection { background: rgba(124, 109, 240, 0.35); color: #fff; }
+::selection { background: rgba(255, 255, 255, 0.25); color: var(--bg-primary); }
+:root[data-theme="light"] ::selection { background: rgba(0, 0, 0, 0.2); color: #fff; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 
 header {
@@ -240,7 +270,10 @@ nav::-webkit-scrollbar { display: none; }
 }
 .nav-btn.active {
   color: var(--accent);
-  background: rgba(79, 124, 240, 0.1);
+  background: rgba(255, 255, 255, 0.1);
+}
+:root[data-theme="light"] .nav-btn.active {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 main {
@@ -305,7 +338,7 @@ main {
 }
 .cat-btn.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
   border-color: var(--accent);
 }
 
@@ -317,20 +350,20 @@ main {
 }
 
 .news-card {
-  background: rgba(124, 92, 240, 0.04);
+  background: var(--card-bg);
   cursor: pointer;
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(124, 92, 240, 0.15);
+  border: 1px solid var(--card-border);
   position: relative;
   border-radius: 16px;
 }
 .news-card:hover {
   transform: translateY(-4px);
   border-color: var(--accent);
-  box-shadow: 0 12px 40px rgba(124, 92, 240, 0.12);
+  box-shadow: 0 12px 40px var(--card-shadow);
 }
 .news-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -422,7 +455,7 @@ main {
   outline: none;
   border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 }
-.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124, 109, 240, 0.1); }
+.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-glow); }
 .search-input::placeholder { color: var(--text-dim); }
 
 .search-btn {
@@ -442,7 +475,7 @@ main {
 }
 .search-btn:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
   border-color: var(--accent);
 }
 
@@ -479,7 +512,7 @@ main {
   font-family: inherit;
   border-radius: 6px;
 }
-.search-history-item:hover { background: var(--accent); color: #fff; }
+.search-history-item:hover { background: var(--accent); color: var(--accent-text); }
 
 .search-history-clear {
   font-size: 11px;
@@ -584,8 +617,8 @@ main {
 
 .wiki-entry {
   padding: 14px 18px;
-  background: rgba(124, 92, 240, 0.04);
-  border: 1px solid rgba(124, 92, 240, 0.15);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 16px;
   margin-bottom: 10px;
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
@@ -594,7 +627,7 @@ main {
 .wiki-entry:hover {
   transform: translateY(-4px);
   border-color: var(--accent);
-  box-shadow: 0 12px 40px rgba(124, 92, 240, 0.12);
+  box-shadow: 0 12px 40px var(--card-shadow);
 }
 
 .wiki-entry-title {
@@ -630,6 +663,7 @@ main {
 }
 .wiki-entry-full p { margin-bottom: 10px; }
 .wiki-entry-full img { max-width: 100%; border-radius: 6px; margin: 8px 0; }
+.wiki-entry-full .wiki-entry-text { font-size: 13px; line-height: 1.8; color: var(--text-secondary); }
 
 .wiki-entry-full .typing-cursor::after {
   content: '|';
@@ -672,7 +706,7 @@ main {
   transition: border-color 0.25s ease;
   border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 }
-.weather-city-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124, 109, 240, 0.1); }
+.weather-city-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-glow); }
 .weather-city-input::placeholder { color: var(--text-dim); }
 
 .weather-city-select .search-btn {
@@ -683,8 +717,8 @@ main {
 .weather-result { margin-top: 20px; }
 
 .weather-card {
-  background: rgba(124, 92, 240, 0.04);
-  border: 1px solid rgba(124, 92, 240, 0.15);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 16px;
   padding: 28px;
   position: relative;
@@ -693,7 +727,7 @@ main {
 }
 .weather-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(124, 92, 240, 0.12);
+  box-shadow: 0 12px 40px var(--card-shadow);
   border-color: var(--accent);
 }
 
@@ -738,7 +772,7 @@ main {
   font-weight: 600;
   margin: 20px 0 10px;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(124, 92, 240, 0.08);
+  border-bottom: 1px solid var(--card-divider);
 }
 
 .weather-hourly-strip {
@@ -752,8 +786,8 @@ main {
   min-width: 60px;
   text-align: center;
   padding: 10px 6px;
-  background: rgba(124, 92, 240, 0.04);
-  border: 1px solid rgba(124, 92, 240, 0.1);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border-soft);
   border-radius: 14px;
 }
 .weather-hourly-cell-time {
@@ -770,7 +804,7 @@ main {
 }
 .weather-hourly-cell-precip {
   font-size: 10px;
-  color: #7c5cf0;
+  color: var(--accent);
   margin-top: 2px;
 }
 
@@ -784,15 +818,15 @@ main {
   .mf-days { grid-template-columns: 1fr; }
 }
 .mf-day-card {
-  background: rgba(124, 92, 240, 0.04);
-  border: 1px solid rgba(124, 92, 240, 0.15);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   overflow: hidden;
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 .mf-day-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(124, 92, 240, 0.10);
+  box-shadow: 0 8px 24px var(--card-shadow-sm);
   border-color: var(--accent);
 }
 .mf-day-header {
@@ -820,7 +854,7 @@ main {
 .mf-day-infos {
   display: flex;
   gap: 0;
-  border-top: 1px solid rgba(124, 92, 240, 0.06);
+  border-top: 1px solid var(--card-divider);
 }
 .mf-day-info {
   flex: 1;
@@ -845,7 +879,7 @@ main {
   width: 100%;
   background: none;
   border: none;
-  border-top: 1px solid rgba(124, 92, 240, 0.06);
+  border-top: 1px solid var(--card-divider);
   color: var(--text-dim);
   cursor: pointer;
   font-size: 11px;
@@ -853,7 +887,7 @@ main {
   transition: color 0.15s, background 0.15s;
   line-height: 1;
 }
-.mf-day-btn:hover { color: var(--accent); background: rgba(124, 92, 240, 0.03); }
+.mf-day-btn:hover { color: var(--accent); background: var(--card-bg); }
 
 .weather-daily-btn {
   background: none;
@@ -868,7 +902,7 @@ main {
 
 .weather-daily-detail {
   padding: 12px 8px 8px;
-  border-bottom: 1px solid rgba(124, 92, 240, 0.06);
+  border-bottom: 1px solid var(--card-divider);
 }
 .weather-daily-detail-grid {
   display: flex;
@@ -880,7 +914,7 @@ main {
   min-width: 60px;
   text-align: center;
   padding: 8px;
-  background: rgba(124, 92, 240, 0.04);
+  background: var(--card-bg);
   border-radius: 10px;
 }
 .weather-dd-label {
@@ -909,8 +943,8 @@ main {
   min-width: 80px;
   text-align: center;
   padding: 12px 10px;
-  background: rgba(124, 92, 240, 0.04);
-  border: 1px solid rgba(124, 92, 240, 0.1);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border-soft);
   border-radius: 12px;
 }
 .weather-ds-label {
@@ -934,10 +968,10 @@ main {
 }
 
 .crypto-card {
-  background: rgba(124, 92, 240, 0.04);
+  background: var(--card-bg);
   padding: 32px;
   text-align: center;
-  border: 1px solid rgba(124, 92, 240, 0.15);
+  border: 1px solid var(--card-border);
   border-radius: 16px;
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   position: relative;
@@ -946,7 +980,7 @@ main {
 .crypto-card:hover {
   transform: translateY(-4px);
   border-color: var(--accent);
-  box-shadow: 0 12px 40px rgba(124, 92, 240, 0.12);
+  box-shadow: 0 12px 40px var(--card-shadow);
 }
 
 .crypto-header {
@@ -1067,7 +1101,7 @@ main {
   font-family: inherit;
   border-radius: 8px;
 }
-.article-tool-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.article-tool-btn:hover { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 
 .error-state {
   text-align: center;
@@ -1239,7 +1273,7 @@ main {
   font-family: inherit;
   border-radius: 8px;
 }
-.article-link:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.article-link:hover { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 
 @media (max-width: 768px) {
   .header-inner { padding: 0 12px; height: 50px; }

@@ -446,9 +446,8 @@
         try {
           const ac = new AbortController();
           const tmr = setTimeout(() => ac.abort(), 10000);
-          let html = '';
-
           if (domain.includes('wiktionary')) {
+            let html = '';
             const defs = await wikiGetWiktionaryDefs(title, ac.signal);
             clearTimeout(tmr);
             if (defs && defs.length) {
@@ -464,6 +463,7 @@
             } else {
               html = '<p style="color:var(--text-dim)">Aucune définition trouvée.</p>';
             }
+            typewrite(fullDiv, html);
           } else {
             const page = await wikiGetExtract(domain, title, ac.signal);
             clearTimeout(tmr);
@@ -473,14 +473,16 @@
             }
             const paragraphs = page.extract.split('\n').filter(p => p.trim()).map(p => sanitize(p));
             const thumb = page.thumbnail ? page.thumbnail.source : '';
-            if (thumb) {
-              html += `<img src="${sanitize(thumb)}" alt="" loading="lazy" style="max-width:100%;border-radius:6px;margin-bottom:12px">`;
-            }
-            html += paragraphs.map(p => `<p>${p}</p>`).join('');
+            let html = paragraphs.map(p => `<p>${p}</p>`).join('');
             html += `<p style="margin-top:10px"><a href="${domain}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(btn.closest('.wiki-source-section')?.querySelector('.source-name')?.textContent || 'le wiki')} →</a></p>`;
-          }
 
-          typewrite(fullDiv, html);
+            if (thumb) {
+              fullDiv.innerHTML = `<img src="${sanitize(thumb)}" alt="" loading="lazy" style="max-width:100%;border-radius:6px;margin-bottom:12px"><div class="wiki-entry-text"></div>`;
+              typewrite(fullDiv.querySelector('.wiki-entry-text'), html);
+            } else {
+              typewrite(fullDiv, html);
+            }
+          }
         } catch (_) {
           fullDiv.innerHTML = '<p style="color:var(--text-dim)">Erreur de chargement.</p>';
         }
