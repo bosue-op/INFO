@@ -816,6 +816,13 @@ main {
   transition: color 0.15s;
 }
 .weather-daily-btn:hover { color: var(--accent); }
+.weather-daily-btn .arrow {
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+.weather-daily-btn.open .arrow {
+  transform: rotate(90deg);
+}
 
 .weather-daily-detail {
   padding: 12px 8px 8px;

@@ -149,6 +149,21 @@
     }
   }
 
+  /* --- HARD RESET --- */
+  async function hardReset() {
+    notify('Nettoyage du cache…');
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    notify('Rechargement…');
+    setTimeout(() => window.location.reload(true), 500);
+  }
+
   /* --- THEME --- */
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
@@ -669,7 +684,7 @@
                     <span>${idx === 0 ? (cc.uvIndex || '—') : '—'}</span>
                   </span>
                 </div>
-                <button class="weather-daily-btn mf-day-btn" data-idx="${idx}" title="Détails">❯ Détails</button>
+                <button class="weather-daily-btn mf-day-btn" data-idx="${idx}" title="Détails"><span class="arrow">❯</span> Détails</button>
                 <div class="weather-daily-detail" id="forecast-${idx}" style="display:none">
                   <div class="weather-daily-detail-grid">
                     <div class="weather-dd-item">
@@ -704,7 +719,7 @@
           if (!detail) return;
           const isOpen = detail.style.display !== 'none';
           detail.style.display = isOpen ? 'none' : 'block';
-          btn.textContent = isOpen ? '❯ Détails' : 'v Détails';
+          btn.classList.toggle('open', !isOpen);
         });
       });
     } catch (e) {
@@ -888,6 +903,8 @@
 
     dom.shareBtn.addEventListener('click', shareArticle);
     dom.themeBtn.addEventListener('click', toggleTheme);
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) resetBtn.addEventListener('click', hardReset);
 
     function doWiki() { handleUnifiedWikiSearch(dom.wikiSearch.value); }
     dom.wikiSearchBtn.addEventListener('click', doWiki);
