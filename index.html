@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INFOHUB — Actus, Wiki, Météo & Crypto</title>
+  <meta name="description" content="INFOHUB : Hub tout-en-un — actualités, wikis, météo et crypto">
+  <meta name="theme-color" content="#0a0a14" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f0f0f5" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='70' height='70' x='15' y='15' rx='8' fill='%234f7cf0'/><text x='50' y='64' font-size='44' font-weight='700' fill='white' text-anchor='middle' font-family='Inter,sans-serif'>H</text></svg>">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a href="#main" class="skip-link">Aller au contenu principal</a>
+
+  <header role="banner">
+    <div class="header-inner">
+      <a href="#" class="logo" aria-label="INFOHUB - Accueil">INFOHUB</a>
+      <div class="header-controls">
+        <button id="themeBtn" class="icon-btn" title="Changer le thème" aria-label="Changer le thème clair/sombre">
+          <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+      <nav role="navigation" aria-label="Navigation principale">
+        <button class="nav-btn active" data-section="news" aria-current="page" title="Actualités">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8Z"/></svg>
+          <span>Actus</span>
+        </button>
+        <button class="nav-btn" data-section="wiki" title="Wiki unifié">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span>Wiki</span>
+        </button>
+
+        <button class="nav-btn" data-section="weather" title="Météo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+          <span>Météo</span>
+        </button>
+        <button class="nav-btn" data-section="crypto" title="Crypto">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <span>Crypto</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" role="main">
+
+    <h1 class="visually-hidden">INFOHUB — Actus, Wiki, Météo & Crypto</h1>
+
+    <!-- SECTION ACTUALITÉS -->
+    <section id="section-news" class="section active" aria-label="Actualités">
+      <div class="section-header">
+        <h2>Actualités</h2>
+        <div class="category-tabs" role="tablist" aria-label="Catégories d'actualités">
+          <button class="cat-btn active" role="tab" aria-selected="true" data-category="all">Toutes</button>
+          <button class="cat-btn" role="tab" aria-selected="false" data-category="general">Général</button>
+          <button class="cat-btn" role="tab" aria-selected="false" data-category="sport">Sport</button>
+          <button class="cat-btn" role="tab" aria-selected="false" data-category="tech">Tech</button>
+        </div>
+      </div>
+      <div class="news-grid" id="newsGrid" role="list">
+        <div class="loading-state">Chargement des actualités...</div>
+      </div>
+      <div id="articleView" class="article-view" style="display:none" role="dialog" aria-modal="true" aria-label="Article détaillé">
+        <button class="article-close" id="articleClose" aria-label="Fermer l'article">&times;</button>
+        <div class="article-toolbar">
+          <button id="shareBtn" class="article-tool-btn" title="Partager" aria-label="Partager cet article">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            <span>Partager</span>
+          </button>
+        </div>
+        <div id="articleBody"></div>
+      </div>
+    </section>
+
+    <!-- SECTION WIKI UNIFIÉ -->
+    <section id="section-wiki" class="section" aria-label="Wiki unifié">
+      <div class="section-header">
+        <h2>Recherche Wiki unifiée</h2>
+      </div>
+      <div class="search-bar" role="search">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="search" id="wikiSearch" class="search-input" placeholder="Rechercher sur tous les wikis..." autocomplete="off" aria-label="Rechercher sur tous les wikis">
+        </div>
+        <button id="wikiSearchBtn" class="search-btn">Rechercher</button>
+      </div>
+      <div id="wikiHistory" class="search-history" style="display:none"></div>
+      <div id="wikiContent">
+        <div class="initial-hint">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <p>Cherchez un mot-clé et explorez Wikipedia, Wiktionnaire, Wikibooks, Wikiquote & Wikinews</p>
+        </div>
+      </div>
+      <div id="wikiResult" class="result-container"></div>
+    </section>
+
+    <!-- SECTION MÉTÉO -->
+    <section id="section-weather" class="section" aria-label="Météo">
+      <div class="section-header">
+        <h2>Météo</h2>
+        <div class="weather-city-select">
+          <input type="text" id="weatherCity" class="search-input" placeholder="Ville..." value="Paris" aria-label="Changer de ville" style="width:160px;border-radius:4px;padding-left:12px">
+          <button id="weatherCityBtn" class="search-btn">OK</button>
+        </div>
+      </div>
+      <div id="weatherContent">
+        <div class="initial-hint">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+          <p>Entrez une ville et cliquez sur OK</p>
+        </div>
+      </div>
+      <div id="weatherResult" class="weather-result"></div>
+    </section>
+
+    <!-- SECTION CRYPTO -->
+    <section id="section-crypto" class="section" aria-label="Cours crypto">
+      <div class="section-header">
+        <h2>Crypto-monnaies</h2>
+        <button id="cryptoRefreshBtn" class="search-btn">Rafraîchir</button>
+      </div>
+      <div class="crypto-search-wrap">
+        <input type="text" id="cryptoSearch" class="crypto-search" placeholder="Rechercher une crypto…">
+      </div>
+      <div id="cryptoResult" class="crypto-result"></div>
+    </section>
+
+  </main>
+
+  <div class="notification" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
