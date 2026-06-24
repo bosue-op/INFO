@@ -626,7 +626,7 @@
     try {
       const ac = new AbortController();
       const tmr = setTimeout(() => ac.abort(), 15000);
-      const data = await fetchJSON('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false', ac.signal);
+      const data = await fetchJSON('https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&order=market_cap_desc&per_page=250&page=1&sparkline=false', ac.signal);
       clearTimeout(tmr);
       renderCrypto(data);
     } catch (_) {
@@ -658,7 +658,7 @@
             <span class="crypto-name">${sanitize(c.name)}</span>
             <span class="crypto-ticker">${sanitize(c.symbol.toUpperCase())}</span>
           </div>
-          <div class="crypto-price">$${formatCryptoPrice(c.current_price)}</div>
+          <div class="crypto-price">€${formatCryptoPrice(c.current_price)}</div>
           <div class="crypto-rank">Rang #${c.market_cap_rank || '—'}</div>
           <div class="crypto-change ${cls}">${arrow} ${Math.abs(change).toFixed(2)}%</div>
         </div>

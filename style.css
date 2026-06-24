@@ -789,6 +789,12 @@ main {
   background: var(--card-bg);
   border: 1px solid var(--card-border-soft);
   border-radius: 14px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.weather-hourly-cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--card-shadow-sm);
+  border-color: var(--accent);
 }
 .weather-hourly-cell-time {
   font-size: 11px;
@@ -916,6 +922,13 @@ main {
   padding: 8px;
   background: var(--card-bg);
   border-radius: 10px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  border: 1px solid transparent;
+}
+.weather-dd-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--card-shadow-sm);
+  border-color: var(--accent);
 }
 .weather-dd-label {
   font-size: 9px;
@@ -946,6 +959,12 @@ main {
   background: var(--card-bg);
   border: 1px solid var(--card-border-soft);
   border-radius: 12px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.weather-ds-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--card-shadow-sm);
+  border-color: var(--accent);
 }
 .weather-ds-label {
   font-size: 9px;
