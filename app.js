@@ -474,15 +474,12 @@
             const paragraphs = page.extract.split('\n').filter(p => p.trim()).map(p => sanitize(p));
             const thumb = page.thumbnail ? page.thumbnail.source : '';
             if (thumb) {
-              fullDiv.innerHTML = `<img src="${sanitize(thumb)}" alt="" loading="lazy" style="margin-bottom:12px">`;
+              html += `<img src="${sanitize(thumb)}" alt="" loading="lazy" style="max-width:100%;border-radius:6px;margin-bottom:12px">`;
             }
             html += paragraphs.map(p => `<p>${p}</p>`).join('');
             html += `<p style="margin-top:10px"><a href="${domain}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(btn.closest('.wiki-source-section')?.querySelector('.source-name')?.textContent || 'le wiki')} →</a></p>`;
           }
 
-          if (!fullDiv.innerHTML) {
-            fullDiv.innerHTML = '';
-          }
           typewrite(fullDiv, html);
         } catch (_) {
           fullDiv.innerHTML = '<p style="color:var(--text-dim)">Erreur de chargement.</p>';
@@ -713,6 +710,16 @@
     if (meta) meta.content = theme === 'light' ? '#f5f5f7' : '#0b0b1a';
   }
 
+  function hardReset() {
+    if (!confirm('Hard reset : vider le cache et recharger ?')) return;
+    localStorage.clear();
+    if ('caches' in window) {
+      caches.keys().then(names => Promise.all(names.map(n => caches.delete(n)))).catch(() => {});
+    }
+    notify('Cache vidé, rechargement...');
+    setTimeout(() => location.reload(), 500);
+  }
+
   function toggleTheme() {
     const cur = document.documentElement.getAttribute('data-theme');
     applyTheme(cur === 'light' ? 'dark' : 'light');
@@ -782,6 +789,8 @@
 
     dom.shareBtn.addEventListener('click', shareArticle);
     dom.themeBtn.addEventListener('click', toggleTheme);
+    dom.resetBtn = $('#resetBtn');
+    if (dom.resetBtn) dom.resetBtn.addEventListener('click', hardReset);
 
     function doWiki() { handleUnifiedWikiSearch(dom.wikiSearch.value); }
     dom.wikiSearchBtn.addEventListener('click', doWiki);

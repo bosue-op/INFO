@@ -138,16 +138,47 @@ header {
   position: relative;
 }
 
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .logo {
   font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
   text-decoration: none;
-  flex-shrink: 0;
   letter-spacing: 2px;
   text-transform: uppercase;
 }
 .logo:hover { opacity: 0.7; }
+
+.reset-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+  border-radius: 8px;
+  padding: 0;
+}
+.reset-btn:hover {
+  color: var(--accent);
+  transform: rotate(180deg);
+}
+.reset-btn svg {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reset-btn:hover svg {
+  transform: rotate(180deg);
+}
 
 .header-controls {
   display: flex;
