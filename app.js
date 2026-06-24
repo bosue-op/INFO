@@ -413,16 +413,15 @@
     try {
       const results = await Promise.allSettled(
         WIKI_SOURCES.map(src =>
-          wikiSearchSource(src.domain, q, signal, 4)
-            .then(searchRes => {
-              return { source: src, results: searchRes };
-            })
+          wikiSearchSource(src.domain, q, signal, 8)
+            .then(searchRes => ({ source: src, results: searchRes }))
+            .catch(() => ({ source: src, results: [] }))
         )
       );
 
       if (signal.aborted) return;
 
-      const sources = results.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean);
+      const sources = results.map(r => r.value);
       const totalResults = sources.reduce((sum, s) => sum + s.results.length, 0);
 
       if (totalResults === 0) {
