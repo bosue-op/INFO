@@ -81,23 +81,30 @@
       </div>
     </section>
 
-    <!-- SECTION WIKI UNIFIÉ -->
-    <section id="section-wiki" class="section" aria-label="Wiki unifié">
+    <!-- SECTION WIKI -->
+    <section id="section-wiki" class="section" aria-label="Wiki">
       <div class="section-header">
-        <h2>Recherche Wiki unifiée</h2>
+        <h2>Recherche Wiki</h2>
       </div>
       <div class="search-bar" role="search">
         <div class="search-input-wrapper">
           <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="search" id="wikiSearch" class="search-input" placeholder="Rechercher sur tous les wikis..." autocomplete="off" aria-label="Rechercher sur tous les wikis">
+          <input type="search" id="wikiSearch" class="search-input" placeholder="Rechercher sur les wikis..." autocomplete="off" aria-label="Rechercher sur les wikis">
         </div>
-        <button id="wikiSearchBtn" class="search-btn">Rechercher</button>
+        <button id="wikiSearchBtn" class="search-btn">OK</button>
+      </div>
+      <div class="wiki-cat-tabs" role="tablist" aria-label="Wiki">
+        <button class="wiki-cat-btn active" role="tab" aria-selected="true" data-wiki="wikipedia">Wikipédia</button>
+        <button class="wiki-cat-btn" role="tab" aria-selected="false" data-wiki="wiktionary">Wiktionnaire</button>
+        <button class="wiki-cat-btn" role="tab" aria-selected="false" data-wiki="wikibooks">Wikibooks</button>
+        <button class="wiki-cat-btn" role="tab" aria-selected="false" data-wiki="wikiquote">Wikiquote</button>
+        <button class="wiki-cat-btn" role="tab" aria-selected="false" data-wiki="wikinews">Wikinews</button>
       </div>
       <div id="wikiHistory" class="search-history" style="display:none"></div>
       <div id="wikiContent">
         <div class="initial-hint">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          <p>Cherchez un mot-clé et explorez Wikipedia, Wiktionnaire, Wikibooks, Wikiquote & Wikinews</p>
+          <p>Cherchez un mot-clé et sélectionnez un wiki</p>
         </div>
       </div>
       <div id="wikiResult" class="result-container"></div>

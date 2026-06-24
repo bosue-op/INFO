@@ -278,6 +278,37 @@ main {
   border-color: var(--accent);
 }
 
+.wiki-cat-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 12px 0 0;
+}
+
+.wiki-cat-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  touch-action: manipulation;
+  border-radius: 8px;
+}
+.wiki-cat-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--text-dim);
+}
+.wiki-cat-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .news-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -478,72 +509,11 @@ main {
 
 .result-container { display: none; }
 
-.wiki-unified-results {
+.wiki-results {
   animation: sectionIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.wiki-source-section {
-  margin-bottom: 24px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  transition: box-shadow 0.3s ease;
-}
 
-.wiki-empty {
-  padding: 16px 18px;
-  color: var(--text-muted);
-  font-style: italic;
-  font-size: 0.9em;
-}
-
-.wiki-source-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 18px;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.2s ease;
-}
-.wiki-source-header:hover { background: var(--bg-hover); }
-.wiki-source-header .source-icon {
-  font-size: 18px;
-  line-height: 1;
-}
-.wiki-source-header .source-name {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  color: var(--text-muted);
-}
-.wiki-source-header .source-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--accent);
-  display: inline-block;
-}
-.wiki-source-header .source-count {
-  margin-left: auto;
-  font-size: 10px;
-  color: var(--text-dim);
-  background: var(--bg-secondary);
-  padding: 2px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-}
-.wiki-source-header .source-toggle {
-  color: var(--text-dim);
-  font-size: 12px;
-}
-
-.wiki-source-body { padding: 8px 0; }
-
-.wiki-source-body.collapsed { display: none; }
 
 .wiki-entry {
   padding: 14px 18px;
@@ -1243,8 +1213,6 @@ main {
 
   .initial-hint { padding: 40px 16px; }
 
-  .wiki-source-body { padding: 12px 16px; }
-  .wiki-source-header { padding: 12px 16px; }
 }
 
 @media (max-width: 480px) {

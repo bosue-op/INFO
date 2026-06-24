@@ -24,6 +24,7 @@
 
   const state = {
     articles: [], currentCat: 'all', filtered: [],
+    currentWikiCat: 'wikipedia', wikiResults: null,
     wikiCache: {}, articleId: 0,
     currentArticle: null,
   };
@@ -37,6 +38,7 @@
     wikiSearch: $('#wikiSearch'), wikiSearchBtn: $('#wikiSearchBtn'),
     wikiContent: $('#wikiContent'), wikiResult: $('#wikiResult'),
     wikiHistory: $('#wikiHistory'),
+    wikiCatTabs: $('.wiki-cat-tabs'), wikiCatBtns: $$('.wiki-cat-btn'),
     articleView: $('#articleView'), articleBody: $('#articleBody'),
     articleClose: $('#articleClose'), notif: $('.notification'),
     shareBtn: $('#shareBtn'),
@@ -389,7 +391,11 @@
     return defs.slice(0, 10);
   }
 
-  async function handleUnifiedWikiSearch(query) {
+  function getWikiSource(id) {
+    return WIKI_SOURCES.find(s => s.id === id) || WIKI_SOURCES[0];
+  }
+
+  async function handleWikiSearch(query) {
     if (!query.trim()) return;
     if (wikiAbort) wikiAbort.abort();
     wikiAbort = new AbortController();
@@ -398,102 +404,56 @@
 
     addHistory('infohub-wiki-history', q);
 
-    const cacheKey = 'unified_' + q.toLowerCase();
+    const src = getWikiSource(state.currentWikiCat);
+    const cacheKey = src.id + '_' + q.toLowerCase();
     if (state.wikiCache[cacheKey]) {
-      renderUnifiedWikiResults(state.wikiCache[cacheKey]);
+      renderWikiResults(src, state.wikiCache[cacheKey]);
       dom.wikiResult.style.display = 'block';
       dom.wikiContent.style.display = 'none';
       return;
     }
 
     dom.wikiResult.style.display = 'block';
-    dom.wikiResult.innerHTML = '<div class="loading-state">Recherche sur tous les wikis…</div>';
+    dom.wikiResult.innerHTML = '<div class="loading-state">Recherche sur ' + sanitize(src.label) + '...</div>';
     dom.wikiContent.style.display = 'none';
 
     try {
-      const results = await Promise.allSettled(
-        WIKI_SOURCES.map(src =>
-          wikiSearchSource(src.domain, q, signal, 8)
-            .then(searchRes => ({ source: src, results: searchRes }))
-            .catch(() => ({ source: src, results: [] }))
-        )
-      );
-
+      const results = await wikiSearchSource(src.domain, q, signal, 10);
       if (signal.aborted) return;
 
-      const sources = results.map(r => r.value);
-      const totalResults = sources.reduce((sum, s) => sum + s.results.length, 0);
-
-      if (totalResults === 0) {
-        dom.wikiResult.innerHTML = '<div class="error-state"><p>Aucun résultat trouvé sur les wikis.</p></div>';
+      if (!results.length) {
+        dom.wikiResult.innerHTML = '<div class="error-state"><p>Aucun résultat sur ' + sanitize(src.label) + '.</p></div>';
         return;
       }
 
-      renderUnifiedWikiResults(sources);
-      cacheWiki(cacheKey, sources);
+      renderWikiResults(src, results);
+      cacheWiki(cacheKey, results);
     } catch (e) {
       if (e.name === 'AbortError') return;
-      dom.wikiResult.innerHTML = '<div class="error-state"><p>Erreur de connexion aux wikis.</p></div>';
+      dom.wikiResult.innerHTML = '<div class="error-state"><p>Erreur de connexion à ' + sanitize(src.label) + '.</p></div>';
     }
   }
 
-  function renderUnifiedWikiResults(sources) {
-    let html = '<div class="wiki-unified-results">';
+  function renderWikiResults(source, results) {
+    const domain = source.domain;
+    let html = '<div class="wiki-results">';
 
-    sources.forEach(({ source, results }) => {
-      const domain = source.domain;
-      const isOpen = source.id === 'wikipedia' || source.id === 'wiktionary';
-
+    results.forEach(r => {
+      const enc = encodeURIComponent(r.title);
       html += `
-        <div class="wiki-source-section">
-          <div class="wiki-source-header" data-toggle="${source.id}">
-            <span class="source-dot"></span>
-            <span class="source-name">${sanitize(source.label)}</span>
-            <span class="source-count">${results.length}</span>
-            <span class="source-toggle">${isOpen ? 'v' : '❯'}</span>
+        <div class="wiki-entry">
+          <div class="wiki-entry-title">
+            <a href="${domain}/wiki/${enc}" target="_blank" rel="noopener noreferrer" class="wiki-entry-link">${sanitize(r.title)}</a>
+            <button class="wiki-expand-btn" data-domain="${domain}" data-title="${sanitize(r.title)}" title="Afficher l'article complet">❯</button>
           </div>
-          <div class="wiki-source-body ${isOpen ? '' : 'collapsed'}">
-      `;
-
-      if (!results.length) {
-        html += '<div class="wiki-empty">Aucun résultat</div>';
-      } else {
-        results.forEach(r => {
-        const enc = encodeURIComponent(r.title);
-        html += `
-          <div class="wiki-entry">
-            <div class="wiki-entry-title">
-              <a href="${domain}/wiki/${enc}" target="_blank" rel="noopener noreferrer" class="wiki-entry-link">${sanitize(r.title)}</a>
-              <button class="wiki-expand-btn" data-domain="${domain}" data-title="${sanitize(r.title)}" title="Afficher l'article complet">❯</button>
-            </div>
-            <div class="wiki-entry-desc">${sanitize(truncate(stripHtml(r.snippet || ''), 240))}</div>
-            <div class="wiki-entry-full" style="display:none"></div>
-          </div>
-        `;
-      });
-
-      }
-
-      html += `
-          </div>
+          <div class="wiki-entry-desc">${sanitize(truncate(stripHtml(r.snippet || ''), 240))}</div>
+          <div class="wiki-entry-full" style="display:none"></div>
         </div>
       `;
     });
 
     html += '</div>';
     dom.wikiResult.innerHTML = html;
-
-    dom.wikiResult.querySelectorAll('.wiki-source-header').forEach(hdr => {
-      hdr.addEventListener('click', () => {
-        const body = hdr.nextElementSibling;
-        const toggle = hdr.querySelector('.source-toggle');
-        if (body) {
-          const wasCollapsed = body.classList.contains('collapsed');
-          body.classList.toggle('collapsed');
-          if (toggle) toggle.textContent = wasCollapsed ? 'v' : '❯';
-        }
-      });
-    });
 
     dom.wikiResult.querySelectorAll('.wiki-expand-btn').forEach(btn => {
       btn.addEventListener('click', async e => {
@@ -509,9 +469,9 @@
           return;
         }
 
-        const domain = btn.dataset.domain;
+        const domn = btn.dataset.domain;
         const title = btn.dataset.title;
-        if (!domain || !title) return;
+        if (!domn || !title) return;
 
         fullDiv.innerHTML = '<div class="loading-state" style="padding:16px 0">Chargement…</div>';
         fullDiv.style.display = 'block';
@@ -523,7 +483,7 @@
           const tmr = setTimeout(() => ac.abort(), 10000);
           let html = '';
 
-          if (domain.includes('wiktionary')) {
+          if (domn.includes('wiktionary')) {
             const defs = await wikiGetWiktionaryDefs(title, ac.signal);
             clearTimeout(tmr);
             if (defs && defs.length) {
@@ -535,12 +495,12 @@
                 }
                 html += `<div style="padding:4px 0 4px 12px;border-left:2px solid var(--accent);margin-bottom:4px;font-size:13px">${sanitize(d.text)}</div>`;
               });
-              html += `<p style="margin-top:10px"><a href="${domain}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(btn.closest('.wiki-source-section')?.querySelector('.source-name')?.textContent || 'le wiki')} →</a></p>`;
+              html += `<p style="margin-top:10px"><a href="${domn}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(source.label)} →</a></p>`;
             } else {
               html = '<p style="color:var(--text-dim)">Aucune définition trouvée.</p>';
             }
           } else {
-            const page = await wikiGetExtract(domain, title, ac.signal);
+            const page = await wikiGetExtract(domn, title, ac.signal);
             clearTimeout(tmr);
             if (!page || !page.extract) {
               fullDiv.innerHTML = '<p style="color:var(--text-dim)">Contenu non disponible.</p>';
@@ -550,7 +510,7 @@
             const thumb = page.thumbnail ? page.thumbnail.source : '';
             if (thumb) html += `<img src="${sanitize(thumb)}" alt="" loading="lazy">`;
             html += paragraphs.map(p => `<p>${p}</p>`).join('');
-            html += `<p style="margin-top:10px"><a href="${domain}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(btn.closest('.wiki-source-section')?.querySelector('.source-name')?.textContent || 'le wiki')} →</a></p>`;
+            html += `<p style="margin-top:10px"><a href="${domn}/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">Lire sur ${sanitize(source.label)} →</a></p>`;
           }
 
           fullDiv.innerHTML = '';
@@ -560,15 +520,6 @@
         }
       });
     });
-  }
-
-  async function showUnifiedWikiInitial() {
-    try {
-      const signal = new AbortController().signal;
-      const randoms = await wikiSearchSource('https://fr.wikipedia.org', 'a', signal, 6);
-      if (!randoms.length) return;
-      dom.wikiContent.querySelector('.initial-hint').style.display = 'block';
-    } catch (_) {}
   }
 
   /* --- WEATHER --- */
@@ -849,7 +800,7 @@
 
     if (id === 'wiki') {
       const hist = loadHistory('infohub-wiki-history');
-      renderHistory(dom.wikiHistory, hist, v => { dom.wikiSearch.value = v; handleUnifiedWikiSearch(v); }, 'infohub-wiki-history');
+      renderHistory(dom.wikiHistory, hist, v => { dom.wikiSearch.value = v; handleWikiSearch(v); }, 'infohub-wiki-history');
     }
     if (id === 'weather') {
       const city = dom.weatherCity.value.trim() || 'Paris';
@@ -866,6 +817,17 @@
       b.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     filterAndRender();
+  }
+
+  function switchWikiCat(cat) {
+    state.currentWikiCat = cat;
+    dom.wikiCatBtns.forEach(b => {
+      const active = b.dataset.wiki === cat;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    const q = dom.wikiSearch.value.trim();
+    if (q) handleWikiSearch(q);
   }
 
   /* --- EVENTS --- */
@@ -908,7 +870,11 @@
     const resetBtn = document.getElementById('resetBtn');
     if (resetBtn) resetBtn.addEventListener('click', hardReset);
 
-    function doWiki() { handleUnifiedWikiSearch(dom.wikiSearch.value); }
+    dom.wikiCatBtns.forEach(btn => {
+      btn.addEventListener('click', () => switchWikiCat(btn.dataset.wiki));
+    });
+
+    function doWiki() { handleWikiSearch(dom.wikiSearch.value); }
     dom.wikiSearchBtn.addEventListener('click', doWiki);
     dom.wikiSearch.addEventListener('keydown', e => { if (e.key === 'Enter') doWiki(); });
     dom.wikiSearch.addEventListener('input', debounce(() => {
@@ -959,5 +925,5 @@
 
   document.addEventListener('DOMContentLoaded', init);
 
-  window.__INFOHUB = { state, loadAllFeeds, handleUnifiedWikiSearch, loadWeather, loadCrypto };
+  window.__INFOHUB = { state, loadAllFeeds, handleWikiSearch, loadWeather, loadCrypto };
 })();
