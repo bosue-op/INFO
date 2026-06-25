@@ -1,7 +1,7 @@
 {
-  "name": "INFOHUB — Actualités, Wikipédia & Dictionnaire",
-  "short_name": "INFOHUB",
-  "description": "INFOHUB — Actualités, wikis, météo & crypto.",
+  "name": "infoici — Actualités, Wikipédia & Dictionnaire",
+  "short_name": "infoici",
+  "description": "infoici — Actualités, wikis, météo & crypto.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0c0c16",

@@ -2,23 +2,78 @@
   'use strict';
 
   const RSS2JSON_API = 'https://api.rss2json.com/v1/api.json';
+  const FEED_CACHE_TTL = 30 * 60 * 1000;
 
-  const FEEDS = [
-    { id: 'lemonde',    name: 'Le Monde',      url: 'https://www.lemonde.fr/rss/une.xml',                cat: 'general' },
-    { id: 'franceinfo', name: 'France Info',   url: 'https://www.francetvinfo.fr/titres.rss',             cat: 'general' },
-    { id: '20minutes',  name: '20 Minutes',    url: 'https://www.20minutes.fr/feeds/rss-une.xml',         cat: 'general' },
-    { id: 'huffpost',   name: 'HuffPost',      url: 'https://www.huffingtonpost.fr/feeds/index.xml',      cat: 'general' },
-    { id: 'courrierint', name: 'Courrier Int.', url: 'https://www.courrierinternational.com/feed/all/rss.xml', cat: 'general' },
-    { id: 'lequipe',    name: "L'Équipe",       url: 'https://www.lequipe.fr/rss/actu_rss.xml',            cat: 'sport'   },
-    { id: 'rmcsport',   name: 'RMC Sport',      url: 'https://rmcsport.bfmtv.com/rss/',                    cat: 'sport'   },
-    { id: 'sportsfr',   name: 'Sports.fr',       url: 'https://www.sports.fr/feed/',                        cat: 'sport'   },
-    { id: 'footmercato', name: 'Foot Mercato',   url: 'https://www.footmercato.net/rss.xml',                cat: 'sport'   },
-    { id: 'sofoot',     name: 'So Foot',         url: 'https://www.sofoot.com/rss.xml',                     cat: 'sport'   },
-    { id: 'maxifoot',   name: 'Maxifoot',        url: 'https://www.maxifoot.com/rss.xml',                   cat: 'sport'   },
-    { id: '01net',      name: '01net',         url: 'https://www.01net.com/rss/actualites/',              cat: 'tech'    },
-    { id: 'numerama',   name: 'Numerama',      url: 'https://www.numerama.com/feed/',                     cat: 'tech'    },
-    { id: 'frandroid',  name: 'Frandroid',     url: 'https://www.frandroid.com/feed',                     cat: 'tech'    },
-  ];
+  const COUNTRY_CONFIGS = {
+    fr: {
+      name: 'France', lang: 'fr', emoji: '🇫🇷', defaultCity: 'Paris',
+      feeds: [
+        { id: 'lemonde',    name: 'Le Monde',      url: 'https://www.lemonde.fr/rss/une.xml',        cat: 'general' },
+        { id: 'franceinfo', name: 'France Info',   url: 'https://www.francetvinfo.fr/titres.rss',    cat: 'general' },
+        { id: 'lequipe',    name: "L'Équipe",      url: 'https://dwh.lequipe.fr/api/edito/rss?path=/', cat: 'sport'   },
+        { id: 'lequipefoot', name: "L'Équipe Foot", url: 'https://dwh.lequipe.fr/api/edito/rss?path=/Football/', cat: 'sport' },
+        { id: 'numerama',   name: 'Numerama',      url: 'https://www.numerama.com/feed/',            cat: 'tech'    },
+        { id: '01net',      name: '01net',         url: 'https://www.01net.com/rss/actualites/',     cat: 'tech'    },
+      ]
+    },
+    us: {
+      name: 'USA', lang: 'en', emoji: '🇺🇸', defaultCity: 'New York',
+      feeds: [
+        { id: 'cnn',        name: 'CNN',          url: 'http://rss.cnn.com/rss/edition.rss',         cat: 'general' },
+        { id: 'npr',        name: 'NPR',          url: 'https://feeds.npr.org/1001/rss.xml',         cat: 'general' },
+        { id: 'espn',       name: 'ESPN',         url: 'https://www.espn.com/espn/rss/news',          cat: 'sport'   },
+        { id: 'sportingnews', name: 'Sporting News', url: 'https://www.sportingnews.com/us/rss',      cat: 'sport'   },
+        { id: 'theverge',   name: 'The Verge',    url: 'https://www.theverge.com/rss/index.xml',     cat: 'tech'    },
+        { id: 'arstechnica', name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/index', cat: 'tech' },
+      ]
+    },
+    gb: {
+      name: 'Royaume-Uni', lang: 'en', emoji: '🇬🇧', defaultCity: 'London',
+      feeds: [
+        { id: 'guardian',   name: 'The Guardian',  url: 'https://www.theguardian.com/uk/rss',        cat: 'general' },
+        { id: 'standard',   name: 'Evening Standard', url: 'https://www.standard.co.uk/rss',         cat: 'general' },
+        { id: 'bbcsport',   name: 'BBC Sport',    url: 'https://feeds.bbci.co.uk/sport/rss.xml',     cat: 'sport'   },
+        { id: 'guardiansport', name: 'Guardian Sport', url: 'https://www.theguardian.com/uk/sport/rss', cat: 'sport' },
+        { id: 'bbctech',    name: 'BBC Tech',     url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', cat: 'tech' },
+        { id: 'techradar',  name: 'TechRadar',    url: 'https://www.techradar.com/rss',              cat: 'tech'    },
+      ]
+    },
+    de: {
+      name: 'Allemagne', lang: 'de', emoji: '🇩🇪', defaultCity: 'Berlin',
+      feeds: [
+        { id: 'spiegel',    name: 'Der Spiegel',  url: 'https://www.spiegel.de/schlagzeilen/index.rss', cat: 'general' },
+        { id: 'zeit',       name: 'Die Zeit',     url: 'https://newsfeed.zeit.de/index',              cat: 'general' },
+        { id: 'kicker',     name: 'Kicker',       url: 'https://newsfeed.kicker.de/news/aktuell',     cat: 'sport'   },
+        { id: 'sportschau', name: 'Sportschau',   url: 'https://www.sportschau.de/index~rss2.xml',    cat: 'sport'   },
+        { id: 'heise',      name: 'Heise',        url: 'https://www.heise.de/rss/heise.rdf',          cat: 'tech'    },
+        { id: 'golem',      name: 'Golem',        url: 'https://rss.golem.de/rss.php?feed=RSS2.0',    cat: 'tech'    },
+      ]
+    },
+    es: {
+      name: 'Espagne', lang: 'es', emoji: '🇪🇸', defaultCity: 'Madrid',
+      feeds: [
+        { id: 'elpais',     name: 'El País',      url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada', cat: 'general' },
+        { id: 'elmundo',    name: 'El Mundo',     url: 'https://e00-elmundo.uecdn.es/elmundo/rss/portada.xml', cat: 'general' },
+        { id: 'marca',      name: 'Marca',        url: 'https://www.marca.com/rss/portada.xml',       cat: 'sport'   },
+        { id: 'as',         name: 'AS',           url: 'https://feeds.as.com/mrss-s/pages/as/site/as.com/portada', cat: 'sport'   },
+        { id: 'genbeta',    name: 'Genbeta',      url: 'https://www.genbeta.com/feedburner.xml',       cat: 'tech'    },
+        { id: 'xataka',     name: 'Xataka',       url: 'https://www.xataka.com/feedburner.xml',        cat: 'tech'    },
+      ]
+    },
+    it: {
+      name: 'Italie', lang: 'it', emoji: '🇮🇹', defaultCity: 'Rome',
+      feeds: [
+        { id: 'repubblica', name: 'La Repubblica', url: 'https://www.repubblica.it/rss/homepage/rss2.0.xml', cat: 'general' },
+        { id: 'corriere',   name: 'Corriere della Sera', url: 'https://www.corriere.it/rss/homepage.xml', cat: 'general' },
+        { id: 'gazzetta',   name: 'La Gazzetta',  url: 'https://www.gazzetta.it/dynamic-feed/rss/section/last.xml', cat: 'sport' },
+        { id: 'corrieredellosport', name: 'Corriere dello Sport', url: 'https://www.corrieredellosport.it/rss/', cat: 'sport' },
+        { id: 'tomshw',     name: "Tom's Hardware", url: 'https://www.tomshw.it/feed/',                cat: 'tech'    },
+        { id: 'webnews',    name: 'Webnews',      url: 'https://www.webnews.it/feed/',                 cat: 'tech'    },
+      ]
+    },
+  };
+
+  const DEFAULT_COUNTRY = 'fr';
 
   const CACHE_MAX = 50;
 
@@ -26,6 +81,9 @@
     articles: [], currentCat: 'all', filtered: [],
     wikiCache: {}, articleId: 0,
     currentArticle: null,
+    currentCountry: DEFAULT_COUNTRY,
+    loading: false, pendingCat: null, feedAbort: null,
+    weatherCountry: DEFAULT_COUNTRY,
   };
 
   const $ = (s, p) => (p || document).querySelector(s);
@@ -40,6 +98,9 @@
     articleView: $('#articleView'), articleBody: $('#articleBody'),
     articleClose: $('#articleClose'), notif: $('.notification'),
     shareBtn: $('#shareBtn'),
+    translateBtn: $('#translateBtn'),
+    countrySelect: $('#countrySelect'),
+    weatherCountrySelect: $('#weatherCountrySelect'),
     themeBtn: $('#themeBtn'),
     weatherContent: $('#weatherContent'), weatherResult: $('#weatherResult'),
     weatherCity: $('#weatherCity'), weatherCityBtn: $('#weatherCityBtn'),
@@ -102,10 +163,15 @@
     window._notifTimer = setTimeout(() => dom.notif.classList.remove('show'), 3000);
   }
 
-  async function fetchJSON(url, signal) {
-    const res = await fetch(url, { signal, headers: { 'Accept': 'application/json' } });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
+  async function fetchJSON(url, signalOrMs) {
+    let signal, tid;
+    if (signalOrMs instanceof AbortSignal) { signal = signalOrMs; }
+    else if (typeof signalOrMs === 'number') { const ac = new AbortController(); tid = setTimeout(() => ac.abort(), signalOrMs); signal = ac.signal; }
+    try {
+      const res = await fetch(url, { signal, headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    } finally { if (tid) clearTimeout(tid); }
   }
 
   function debounce(fn, ms) {
@@ -146,33 +212,158 @@
     if (clearBtn) clearBtn.addEventListener('click', () => clearHistory(clearKey, el));
   }
 
-  async function loadFeed(feed) {
-    const url = `${RSS2JSON_API}?rss_url=${encodeURIComponent(feed.url)}`;
+  function feedCacheKey(feed) { return 'infohub-feed-' + feed.id + '-' + state.currentCountry; }
+
+  function feedCacheGet(key) {
     try {
-      const data = await fetchJSON(url);
-      if (data.status !== 'ok') throw new Error('API error');
-      return data.items.map(item => ({
-        title: item.title || '(Sans titre)',
-        desc: stripHtml(item.description || ''),
-        link: item.link || '#',
-        date: item.pubDate || '',
-        img: item.thumbnail || item.enclosure?.link || extractImg(item.content || '') || extractImg(item.description || '') || `https://picsum.photos/seed/${simpleHash(item.title || item.link)}/400/250`,
-        source: feed.name, category: feed.cat, feedId: feed.id,
-      }));
-    } catch (e) {
-      if (e.name !== 'AbortError') console.warn(`RSS ${feed.name}:`, e);
-      return [];
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (Date.now() - parsed.ts < FEED_CACHE_TTL) return parsed.items;
+    } catch {}
+    return null;
+  }
+
+  function feedCacheSet(key, items) {
+    try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), items })); } catch {}
+  }
+
+  function parseFeedXML(xmlDoc, feed) {
+    const raw = [];
+    const rssItems = xmlDoc.getElementsByTagName('item');
+    if (rssItems.length) {
+      for (const el of rssItems) {
+        const gt = t => el.getElementsByTagName(t)[0]?.textContent || '';
+        const le = el.getElementsByTagName('link')[0];
+        raw.push({
+          title: gt('title') || '(Sans titre)',
+          desc: stripHtml(gt('description')),
+          link: le?.textContent || le?.getAttribute('href') || '#',
+          date: gt('pubDate') || gt('dc:date'),
+          img: extractImg(gt('content:encoded') || gt('description')) || '',
+        });
+      }
+    } else {
+      const atom = xmlDoc.getElementsByTagName('entry');
+      for (const el of atom) {
+        const gt = t => el.getElementsByTagName(t)[0]?.textContent || '';
+        const le = el.getElementsByTagName('link')[0];
+        const summary = gt('summary');
+        const content = gt('content') || summary;
+        raw.push({
+          title: gt('title') || '(Sans titre)',
+          desc: stripHtml(summary || content),
+          link: le?.getAttribute('href') || le?.textContent || '#',
+          date: gt('published') || gt('updated'),
+          img: extractImg(content) || '',
+        });
+      }
     }
+    if (!raw.length) return [];
+    return raw.map((item, i) => ({
+      ...item,
+      img: item.img || `https://picsum.photos/seed/${simpleHash(item.title + feed.id + i)}/400/250`,
+      source: feed.name, category: feed.cat, feedId: feed.id,
+    }));
+  }
+
+  async function loadFeedViaProxy(feed) {
+    const proxies = ['https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?url='];
+    for (const proxy of proxies) {
+      try {
+        const ac = new AbortController();
+        const tmr = setTimeout(() => ac.abort(), 8000);
+        const res = await fetch(proxy + encodeURIComponent(feed.url), { signal: ac.signal });
+        clearTimeout(tmr);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const xmlText = await res.text();
+        const xml = new DOMParser().parseFromString(xmlText, 'text/xml');
+        if (xml.querySelector('parsererror')) throw new Error('Bad XML');
+        const items = parseFeedXML(xml, feed);
+        if (items.length) return items;
+      } catch (e) {
+        if (e.name !== 'AbortError') console.warn(feed.name + ' proxy:', e.message || e);
+      }
+    }
+    return [];
+  }
+
+  async function loadFeed(feed) {
+    const cacheKey = feedCacheKey(feed);
+    const cached = feedCacheGet(cacheKey);
+    if (cached) return cached;
+
+    let items;
+    try {
+      const d = await fetchJSON(`${RSS2JSON_API}?rss_url=${encodeURIComponent(feed.url)}`, 12000);
+      if (d.status === 'ok' && d.items?.length) {
+        items = d.items.map(item => ({
+          title: item.title || '(Sans titre)',
+          desc: stripHtml(item.description || ''),
+          link: item.link || '#',
+          date: item.pubDate || '',
+          img: item.thumbnail || item.enclosure?.link || extractImg(item.content || '') || extractImg(item.description || '') || `https://picsum.photos/seed/${simpleHash(item.title || item.link)}/400/250`,
+          source: feed.name, category: feed.cat, feedId: feed.id,
+        }));
+      }
+    } catch {}
+
+    if (!items || !items.length) {
+      items = await loadFeedViaProxy(feed);
+    }
+
+    if (items && items.length) {
+      feedCacheSet(cacheKey, items);
+      return items;
+    }
+    return [];
+  }
+
+  function getCurrentFeeds() {
+    const cfg = COUNTRY_CONFIGS[state.currentCountry];
+    return cfg ? cfg.feeds : COUNTRY_CONFIGS[DEFAULT_COUNTRY].feeds;
   }
 
   async function loadAllFeeds() {
+    if (state.feedAbort) state.feedAbort.abort();
+    state.feedAbort = new AbortController();
+    const signal = state.feedAbort.signal;
+
+    state.loading = true;
     dom.newsGrid.innerHTML = '<div class="loading-state">Chargement des actualités…</div>';
-    const results = await Promise.allSettled(FEEDS.map(loadFeed));
+    const feeds = getCurrentFeeds();
+    const results = [];
+    const BATCH_SIZE = 2;
+    for (let i = 0; i < feeds.length; i += BATCH_SIZE) {
+      if (signal.aborted) return;
+      const batch = feeds.slice(i, i + BATCH_SIZE);
+      dom.newsGrid.innerHTML = `<div class="loading-state">Chargement : ${batch.map(f => f.name).join(', ')}…</div>`;
+      const batchResults = await Promise.allSettled(batch.map(loadFeed));
+      if (signal.aborted) return;
+      results.push(...batchResults);
+      if (i + BATCH_SIZE < feeds.length) {
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+    if (signal.aborted) return;
+
+    state.loading = false;
     state.articles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
     state.articles.forEach(a => { a.id = ++state.articleId; });
-    state.articles.sort((a, b) => new Date(b.date) - new Date(a.date));
+    state.articles.sort((a, b) => (new Date(b.date).getTime() || 0) - (new Date(a.date).getTime() || 0));
+
+    if (state.pendingCat) {
+      state.currentCat = state.pendingCat;
+      state.pendingCat = null;
+      dom.catBtns.forEach(b => {
+        const active = b.dataset.category === state.currentCat;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+    }
     filterAndRender();
-    notify(`${state.articles.length} actualités chargées`);
+    const countryName = COUNTRY_CONFIGS[state.currentCountry]?.name || '';
+    notify(`${state.articles.length} actualités chargées (${countryName})`);
   }
 
   function filterAndRender() {
@@ -242,6 +433,55 @@
     } else {
       await navigator.clipboard.writeText(a.link);
       notify('Lien copié dans le presse-papier');
+    }
+  }
+
+  let translateAbort = null;
+
+  async function translateArticle() {
+    const a = state.currentArticle;
+    if (!a) return;
+    if (translateAbort) translateAbort.abort();
+    translateAbort = new AbortController();
+    const signal = translateAbort.signal;
+
+    const targetLang = 'fr';
+    const sourceLang = COUNTRY_CONFIGS[state.currentCountry]?.lang || 'fr';
+    if (sourceLang === targetLang) {
+      notify('L\'article est déjà en français');
+      return;
+    }
+
+    const btn = dom.translateBtn;
+    const origText = btn.innerHTML;
+    btn.innerHTML = '<span>Traduction…</span>';
+    btn.disabled = true;
+
+    try {
+      const texts = [a.title, a.desc].filter(t => t && t.length > 2);
+      const translated = await Promise.allSettled(
+        texts.map(t => {
+          const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(t.slice(0, 500))}&langpair=${sourceLang}|${targetLang}`;
+          return fetch(url, { signal }).then(r => r.json()).then(d => d.responseData?.translatedText || t);
+        })
+      );
+
+      if (signal.aborted) return;
+
+      const transTitle = translated[0]?.value || a.title;
+      const transDesc = translated[1]?.value || a.desc;
+
+      const titleEl = dom.articleBody.querySelector('.article-title');
+      const descEl = dom.articleBody.querySelector('.article-desc');
+      if (titleEl) titleEl.textContent = transTitle;
+      if (descEl) descEl.textContent = transDesc;
+
+      notify('Article traduit en français');
+    } catch (e) {
+      if (e.name !== 'AbortError') notify('Erreur de traduction');
+    } finally {
+      btn.innerHTML = origText;
+      btn.disabled = false;
     }
   }
 
@@ -318,7 +558,7 @@
     const signal = wikiAbort.signal;
     const q = query.trim();
 
-    addHistory('infohub-wiki-history', q);
+    addHistory('infoici-wiki-history', q);
 
     const cacheKey = 'unified_' + q.toLowerCase();
     if (state.wikiCache[cacheKey]) {
@@ -490,23 +730,15 @@
     });
   }
 
-  async function showUnifiedWikiInitial() {
-    try {
-      const signal = new AbortController().signal;
-      const randoms = await wikiSearchSource('https://fr.wikipedia.org', 'a', signal, 6);
-      if (!randoms.length) return;
-      dom.wikiContent.querySelector('.initial-hint').style.display = 'block';
-    } catch (_) {}
-  }
-
   async function loadWeather(city) {
     dom.weatherContent.style.display = 'none';
     dom.weatherResult.style.display = 'block';
     dom.weatherResult.innerHTML = '<div class="loading-state">Chargement de la météo...</div>';
+    const lang = COUNTRY_CONFIGS[state.weatherCountry]?.lang || 'fr';
     try {
       const ac = new AbortController();
       const tmr = setTimeout(() => ac.abort(), 10000);
-      const res = await fetch(`https://wttr.in/${encodeURIComponent(city)}?lang=fr&format=j1`, { signal: ac.signal });
+      const res = await fetch(`https://wttr.in/${encodeURIComponent(city)}?lang=${lang}&format=j1`, { signal: ac.signal });
       clearTimeout(tmr);
       if (!res.ok) throw new Error('Not found');
       const data = await res.json();
@@ -680,13 +912,7 @@
       });
     }
 
-    const showLess = document.getElementById('crypto-show-less');
-    if (showLess) {
-      showLess.addEventListener('click', () => {
-        cryptoShowAll = false;
-        renderCrypto();
-      });
-    }
+
   }
 
   function formatCryptoPrice(p) {
@@ -727,6 +953,25 @@
     applyTheme(cur === 'light' ? 'dark' : 'light');
   }
 
+  function switchCountry(countryCode) {
+    if (countryCode === state.currentCountry) return;
+    state.currentCountry = countryCode;
+    localStorage.setItem('infohub-country', countryCode);
+    dom.countrySelect.value = countryCode;
+    switchSection('news');
+    loadAllFeeds();
+  }
+
+  function switchWeatherCountry(countryCode) {
+    if (countryCode === state.weatherCountry) return;
+    state.weatherCountry = countryCode;
+    localStorage.setItem('infohub-weather-country', countryCode);
+    dom.weatherCountrySelect.value = countryCode;
+    const cfg = COUNTRY_CONFIGS[countryCode];
+    if (cfg) dom.weatherCity.value = cfg.defaultCity;
+    loadWeather(cfg ? cfg.defaultCity : 'Paris');
+  }
+
   function switchSection(id) {
     dom.navBtns.forEach(b => {
       b.classList.toggle('active', b.dataset.section === id);
@@ -734,18 +979,27 @@
     });
     dom.sections.forEach(s => s.classList.toggle('active', s.id === `section-${id}`));
 
+    dom.countrySelect.value = state.currentCountry;
+    dom.weatherCountrySelect.value = state.weatherCountry;
+
     if (id === 'wiki') {
       const hist = loadHistory('infohub-wiki-history');
       renderHistory(dom.wikiHistory, hist, v => { dom.wikiSearch.value = v; handleUnifiedWikiSearch(v); }, 'infohub-wiki-history');
     }
     if (id === 'weather') {
-      const city = dom.weatherCity.value.trim() || 'Paris';
+      const cfg = COUNTRY_CONFIGS[state.weatherCountry];
+      if (!cfg) return;
+      const city = dom.weatherCity.value.trim() || cfg.defaultCity;
       loadWeather(city);
     }
     if (id === 'crypto') loadCrypto();
   }
 
   function switchCategory(cat) {
+    if (state.loading) {
+      state.pendingCat = cat;
+      return;
+    }
     state.currentCat = cat;
     dom.catBtns.forEach(b => {
       const active = b.dataset.category === cat;
@@ -757,6 +1011,18 @@
 
   function init() {
     initTheme();
+
+    const savedCountry = localStorage.getItem('infohub-country');
+    if (savedCountry && COUNTRY_CONFIGS[savedCountry]) {
+      state.currentCountry = savedCountry;
+    }
+    const savedWeatherCountry = localStorage.getItem('infohub-weather-country');
+    if (savedWeatherCountry && COUNTRY_CONFIGS[savedWeatherCountry]) {
+      state.weatherCountry = savedWeatherCountry;
+    }
+
+    dom.countrySelect.value = state.currentCountry;
+    dom.weatherCountrySelect.value = state.weatherCountry;
 
     dom.navBtns.forEach(btn => {
       btn.addEventListener('click', () => switchSection(btn.dataset.section));
@@ -790,7 +1056,11 @@
     });
 
     dom.shareBtn.addEventListener('click', shareArticle);
+    dom.translateBtn.addEventListener('click', translateArticle);
     dom.themeBtn.addEventListener('click', toggleTheme);
+
+    dom.countrySelect.addEventListener('change', e => switchCountry(e.target.value));
+    dom.weatherCountrySelect.addEventListener('change', e => switchWeatherCountry(e.target.value));
     dom.resetBtn = $('#resetBtn');
     if (dom.resetBtn) dom.resetBtn.addEventListener('click', hardReset);
 

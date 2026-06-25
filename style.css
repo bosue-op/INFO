@@ -312,6 +312,29 @@ main {
   color: var(--text-muted);
 }
 
+.section-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.country-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+  border-radius: 10px;
+  outline: none;
+  min-width: 140px;
+}
+.country-select:hover { border-color: var(--text-dim); }
+.country-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-glow); }
+
 .category-tabs {
   display: flex;
   gap: 6px;
@@ -1338,6 +1361,8 @@ main {
   .nav-btn span { display: none; }
   .nav-btn { padding: 7px 8px; }
   .section-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .section-header-controls { flex-direction: column; align-items: stretch; width: 100%; }
+  .country-select { width: 100%; min-width: 0; }
   .weather-current-deg { font-size: 48px; }
   .crypto-price { font-size: 24px; }
   .weather-card { padding: 20px; }

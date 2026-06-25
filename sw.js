@@ -1,4 +1,4 @@
-const CACHE = 'infohub-v4';
+const CACHE = 'infoici-v4';
 const URLS = [
   '/', '/index.html', '/style.css', '/app.js',
   '/manifest.json',
